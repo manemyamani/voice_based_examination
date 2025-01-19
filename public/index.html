@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aura Assist - Voice-Based Examination</title>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <div class="logo">Aura Assist</div>
+      <a href="login.html" class="login-btn">Login</a>
+    </nav>
+  </header>
+  
+  <main>
+    <div class="hero-section">
+      <h1>Welcome to Aura Assist</h1>
+      <p>Your voice-powered gateway to accessible education.</p>
+      <a href="javascript:void(0)" class="cta-btn" onclick="openModal()">Take Assessment</a>
+      <div id="assessment-modal" class="modal">
+        <div class="modal-content">
+          <h2>Enter Assessment ID</h2>
+          <input type="text" id="assessment-id" placeholder="Enter Assessment ID">
+          <div class="modal-actions">
+            <button class="btn" onclick="takeAssessment()">Take Assessment</button>
+            <button class="btn cancel" onclick="closeModal()">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Aura Assist. All rights reserved.</p>
+  </footer>
+
+  <script src="js/main.js"></script>
+  
+</body>
+</html>

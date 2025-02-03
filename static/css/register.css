@@ -1,0 +1,125 @@
+/* General Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #007acc, #00c6ff);
+    color: #fff;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  
+  header {
+    padding: 20px 40px;
+    background: rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+  }
+  
+  header .logo {
+    font-size: 1.8em;
+    font-weight: bold;
+  }
+  
+  /* Register Container */
+  .register-container {
+    background: rgba(255, 255, 255, 0.9);
+    width: 400px;
+    max-width: 90%;
+    margin: auto;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    text-align: center;
+  }
+  
+  .register-container h2 {
+    margin-bottom: 20px;
+    color: #007acc;
+    font-size: 1.8em;
+  }
+  
+  /* Form Group */
+  .form-group {
+    margin-bottom: 20px;
+    text-align: left;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .form-group input[type="text"],
+  .form-group input[type="email"],
+  .form-group input[type="tel"],
+  .form-group input[type="date"],
+  .form-group input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    font-size: 1em;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  .radio-group {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+  }
+  
+  .radio-group label {
+    margin-right: 10px;
+    color: #333;
+  }
+  
+  /* Register Button */
+  .register-btn {
+    background: #007acc;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1em;
+    cursor: pointer;
+    border-radius: 5px;
+    width: 100%;
+  }
+  
+  .register-btn:hover {
+    background: #005f99;
+  }
+  
+  /* Login Link */
+  .login-link {
+    margin-top: 20px;
+    font-size: 0.9em;
+    color: #333;
+  }
+  
+  .login-link a {
+    color: #007acc;
+    text-decoration: none;
+    font-weight: bold;
+  }
+  
+  .login-link a:hover {
+    color: #005f99;
+    text-decoration: underline;
+  }
+  
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.1);
+    font-size: 0.9em;
+  }
+  

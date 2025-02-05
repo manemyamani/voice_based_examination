@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aura Assist - Voice-Based Examination</title>
-  <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <link rel="stylesheet" href="./static/css/styles.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
   <header>
@@ -20,13 +19,14 @@
       <h1>Welcome to Aura Assist</h1>
       <p>Your voice-powered gateway to accessible education.</p>
       <a href="javascript:void(0)" class="cta-btn" onclick="openModal()">Take Assessment</a>
-      <!-- Modal will appear in place of this button -->
-      <div id="assessment-modal" class="modal">
+      
+      <!-- Modal for Assessment ID input -->
+      <div id="assessment-modal" class="modal" style="display: none;">
         <div class="modal-content">
           <h2>Enter Assessment ID</h2>
           <input type="text" id="assessment-id" placeholder="Enter Assessment ID">
           <div class="modal-actions">
-            <button class="btn" onclick="takeAssessment()">Take Assessment</button>
+            <button class="btn" onclick="takeAssessment()">Take Assessment</button> <!-- Fixed function name -->
             <button class="btn cancel" onclick="closeModal()">Cancel</button>
           </div>
         </div>
@@ -40,37 +40,42 @@
 
   <!-- JavaScript -->
   <script>
-    // Open the modal to prompt for Assessment ID
     function openModal() {
-      document.querySelector('.cta-btn').style.display = 'none';  // Hide the "Take Assessment" button
-      document.getElementById('assessment-modal').style.display = 'block';  // Show the modal
+      document.getElementById('assessment-modal').style.display = 'block';
     }
 
-    // Close the modal without any action
     function closeModal() {
-      document.querySelector('.cta-btn').style.display = 'inline-block';  // Show the "Take Assessment" button again
-      document.getElementById('assessment-modal').style.display = 'none';  // Hide the modal
+      document.getElementById('assessment-modal').style.display = 'none';
     }
 
-    // Take Assessment - check Assessment ID and start the assessment
     function takeAssessment() {
+      console.log("Take Assessment button clicked!"); // Debug log
+
       const assessmentID = document.getElementById('assessment-id').value;
       if (assessmentID) {
-        // Example of checking the Assessment ID
-        // You can replace this with an API call to the backend to validate the ID
-        alert("Starting assessment with ID: " + assessmentID);
-        closeModal();
+        console.log("Assessment ID Entered:", assessmentID); // Debugging log
 
-        // You can make an API call here to check the database and start the assessment
-        // For example: 
-        // fetch('/api/start-assessment', { method: 'POST', body: JSON.stringify({ id: assessmentID }) })
-        //   .then(response => response.json())
-        //   .then(data => console.log(data));
+        fetch('/verify-face', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assessment_id: assessmentID })
+        })
+        .then(response => response.json())
+        .then(data => {
+          console.log("Server Response:", data); // Debugging log
 
+          if (data.success) {
+            window.location.href = data.redirect_url;
+          } else {
+            alert(data.error || "Face verification failed. Please try again.");
+          }
+        })
+        .catch(error => console.error('Error in Fetch Request:', error));
       } else {
         alert("Please enter an Assessment ID.");
       }
     }
   </script>
+
 </body>
 </html>

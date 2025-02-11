@@ -1,15 +1,19 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, Response
 import sqlite3
 import cv2
 import face_recognition
 import numpy as np
 import os
+import time
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for session management
 
-# Path to the folder where candidate images are stored
 KNOWN_FACES_DIR = "known_faces"
+
+# Global variables for webcam and latest frame
+cap = None
+latest_frame = None
 
 # Load known faces from storage
 def load_known_faces():
@@ -89,21 +93,40 @@ def register():
         return jsonify({'success': 'User registered successfully!'}), 200
     return render_template('register.html')
 
+def start_camera():
+    global cap
+    if cap is None or not cap.isOpened():
+        cap = cv2.VideoCapture(0)
+        time.sleep(2)  # Delay for camera to warm up
+        if not cap.isOpened():
+            print("⚠️ Could not access webcam.")
+            return False
+    return True
+
+def stop_camera():
+    global cap
+    if cap and cap.isOpened():
+        cap.release()
+    cap = None
+
 @app.route('/verify-face', methods=['POST'])
 def verify_face():
+    global latest_frame
     data = request.get_json()
     assessment_id = data.get('assessment_id')
 
     if not assessment_id:
         return jsonify({'error': 'Assessment ID is required!'}), 400
 
-    # Capture live image using webcam
-    cap = cv2.VideoCapture(0)
-    ret, frame = cap.read()
-    cap.release()
-
-    if not ret:
+    if not start_camera():
         return jsonify({'error': 'Could not access webcam!'}), 500
+
+    success, frame = cap.read()
+    if not success:
+        stop_camera()  # Stop camera if frame is not captured
+        return jsonify({'error': 'Could not capture image!'}), 500
+
+    latest_frame = frame  # Store latest frame
 
     # Convert frame to RGB for face recognition
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -112,6 +135,7 @@ def verify_face():
     face_encodings = face_recognition.face_encodings(frame_rgb)
     
     if not face_encodings:
+        stop_camera()  # Stop camera if no face detected
         return jsonify({'error': 'No face detected!'}), 400
 
     # Compare with known faces
@@ -121,9 +145,32 @@ def verify_face():
         matched_name = KNOWN_NAMES[matched_index]
 
         session['assessment_id'] = assessment_id  # Store session for authentication
+        stop_camera()  # Stop camera after successful verification
         return jsonify({'success': True, 'message': 'Face verified!', 'redirect_url': url_for('instructions_page')})
     
+    stop_camera()  # Stop camera if face verification fails
     return jsonify({'error': 'Face verification failed!'}), 401
+
+# Webcam streaming function
+def generate_frames():
+    global latest_frame
+    if not start_camera():
+        return None
+
+    while True:
+        success, frame = cap.read()
+        if not success:
+            break
+        else:
+            latest_frame = frame
+            _, buffer = cv2.imencode('.jpg', frame)
+            frame_bytes = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
+@app.route('/video_feed')  
+def video_feed():  
+    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')  
 
 if __name__ == '__main__':
     app.run(debug=True)

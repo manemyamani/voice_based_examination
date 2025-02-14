@@ -11,7 +11,7 @@ Aura Assist is an AI-powered voice-based examination system designed to assist b
 
 ## Tech Stack
 
-- **Frontend**: React
+- **Frontend**: HTML,CSS
 - **Backend**: Python (Flask)
 - **Speech Processing**: Wave2Vec 2.0, Tacotron
 - **Face Recognition**: OpenCV, dlib
@@ -32,8 +32,10 @@ Contributions are welcome! Feel free to fork the repository and submit a pull re
 
 For any inquiries or support, contact:
 
-- **Yamini Manem**
-- Email: [yaminimanem28@gmail.com](yaminimanem28@gmail.com)
+- **Manem Yamani**
+- Email: [manemyamani003@gmail.com]
 - GitHub: [manemyamani](https://github.com/manemyamani)
+## To run 
+- python app.py
 
 ---

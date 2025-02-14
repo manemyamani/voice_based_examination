@@ -70,11 +70,29 @@
             <button class="start-button" onclick="startExam()">Start Exam</button>
         </div>
     </div>
+
     <script>
         function startExam() {
             alert("Exam Started!");
             // Redirect or start exam logic here
         }
+
+        // Function to read text aloud
+        function readInstructions() {
+            const text = document.body.innerText; // Get all text on the page
+            const speech = new SpeechSynthesisUtterance(text);
+            speech.lang = "en-US"; // Set language
+            speech.rate = 1.0; // Adjust speed
+            speech.volume = 1; // Set volume
+            speech.pitch = 1; // Set pitch
+
+            speechSynthesis.speak(speech); // Start speaking
+        }
+
+        // Automatically read instructions when page loads
+        window.onload = function() {
+            readInstructions();
+        };
     </script>
 </body>
 </html>

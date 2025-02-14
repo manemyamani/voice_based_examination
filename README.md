@@ -32,7 +32,7 @@ Contributions are welcome! Feel free to fork the repository and submit a pull re
 
 For any inquiries or support, contact:
 
-- **Your Name**
+- **Yamini Manem**
 - Email: [yaminimanem28@gmail.com](yaminimanem28@gmail.com)
 - GitHub: [manemyamani](https://github.com/manemyamani)
 

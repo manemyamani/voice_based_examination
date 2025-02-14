@@ -26,13 +26,8 @@
           <h2>Enter Assessment ID</h2>
           <input type="text" id="assessment-id" placeholder="Enter Assessment ID">
         
-          <!-- Live Webcam Feed -->
-          <div id="webcam-container" style="display: none;">
-            <video id="webcam-feed" autoplay style="width: 100%; max-height: 300px;"></video>
-          </div>
-        
           <div class="modal-actions">
-            <button class="btn" onclick="startFaceVerification()">Take Assessment</button>
+            <button class="btn" onclick="redirectToVerification()">Take Assessment</button>
             <button class="btn cancel" onclick="closeModal()">Cancel</button>
           </div>
         </div>
@@ -46,80 +41,23 @@
 
   <!-- JavaScript -->
   <script>
-    let webcamStream = null;
-  
     function openModal() {
       document.getElementById('assessment-modal').style.display = 'block';
       document.getElementById('assessment-id').value = ""; // Clear previous input
-      startWebcam(); // Start webcam on modal open
     }
   
     function closeModal() {
       document.getElementById('assessment-modal').style.display = 'none';
-      stopWebcam(); // Stop webcam on modal close
     }
   
-    async function startWebcam() {
-      const videoElement = document.getElementById('webcam-feed');
-      document.getElementById('webcam-container').style.display = 'block';
-  
-      if (webcamStream) {
-        return; // Prevent multiple webcam starts
-      }
-  
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        webcamStream = stream;
-        videoElement.srcObject = stream;
-      } catch (error) {
-        console.error("Webcam Error:", error);
-        
-        if (error.name === "NotAllowedError") {
-          alert("Camera access was denied. Please allow camera permissions in your browser settings.");
-        } else if (error.name === "NotFoundError") {
-          alert("No camera found. Please connect a camera and try again.");
-        } else if (error.name === "NotReadableError") {
-          alert("Camera is in use by another application. Close other apps (Zoom, Teams, etc.) and retry.");
-        } else {
-          alert("Could not access webcam. Please check your device settings.");
-        }
-  
-        document.getElementById('webcam-container').style.display = 'none';
-      }
-    }
-  
-    function stopWebcam() {
-      if (webcamStream) {
-        webcamStream.getTracks().forEach(track => track.stop());
-        webcamStream = null;
-      }
-      document.getElementById('webcam-container').style.display = 'none';
-    }
-  
-    function startFaceVerification() {
+    function redirectToVerification() {
       const assessmentID = document.getElementById('assessment-id').value;
       if (!assessmentID) {
         alert("Please enter an Assessment ID.");
         return;
       }
-  
-      stopWebcam(); // Stop live feed before verification
-  
-      fetch('/verify-face', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assessment_id: assessmentID })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          window.location.href = data.redirect_url;
-        } else {
-          alert(data.error || "Face verification failed. Please try again.");
-          startWebcam(); // Restart webcam if verification fails
-        }
-      })
-      .catch(error => console.error('Error in Fetch Request:', error));
+      sessionStorage.setItem("assessment_id", assessmentID);
+      window.location.href = "/face-verification"; // Redirect to the new verification page
     }
   </script>
   

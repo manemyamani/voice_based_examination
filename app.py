@@ -109,6 +109,11 @@ def stop_camera():
         cap.release()
     cap = None
 
+@app.route('/face-verification')
+def face_verification_page():
+    return render_template('face_verification.html')
+
+
 @app.route('/verify-face', methods=['POST'])
 def verify_face():
     global latest_frame

@@ -83,7 +83,7 @@ def register():
 
         conn = connect_db()
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute(''' 
             INSERT INTO users (first_name, last_name, email, mobile, date_of_birth, gender, password)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (first_name, last_name, email, mobile, date_of_birth, gender, password))
@@ -112,7 +112,6 @@ def stop_camera():
 @app.route('/face-verification')
 def face_verification_page():
     return render_template('face_verification.html')
-
 
 @app.route('/verify-face', methods=['POST'])
 def verify_face():

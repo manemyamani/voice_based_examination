@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -23,9 +23,9 @@
             text-align: center;
         }
         ul {
-        text-align: center;
-        list-style-position: inside; /* Align list items to center */
-        padding: 0;
+            text-align: center;
+            list-style-position: inside; /* Align list items to center */
+            padding: 0;
         }
         .button-container {
             text-align: center;
@@ -74,11 +74,12 @@
         <h3>Acknowledgment</h3>
         <p>By proceeding, you agree to follow the rules and guidelines.</p>
         <div class="button-container">
-            <button class="start-button" onclick="startExam()">Start Exam</button>
+            <button class="start-button">if you are ready to begin the test,then say,Start Exam</button>
         </div>
     </div>
 
     <script>
+        // Function to start the exam
         function startExam() {
             alert("Exam Started!");
             // Redirect or start exam logic here
@@ -95,6 +96,42 @@
 
             speechSynthesis.speak(speech); // Start speaking
         }
+
+        // Initialize SpeechRecognition (for modern browsers like Chrome)
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'en-US'; // Set language to English
+        recognition.continuous = false; // Stop after one command
+        recognition.interimResults = false; // Do not show partial results
+
+        // Start listening for speech
+        recognition.start();
+
+        // When speech is detected and recognized
+        recognition.onresult = function(event) {
+            const command = event.results[0][0].transcript.toLowerCase(); // Convert to lowercase
+
+            // Check if the command is "start exam"
+            if (command === "start exam") {
+                startExam();  // Start the exam
+            } else {
+                const speech = new SpeechSynthesisUtterance("Command not recognized. Please try again.");
+                speech.lang = "en-US"; // Set language
+                speech.rate = 1.0; // Adjust speed
+                speech.volume = 1; // Set volume
+                speech.pitch = 1; // Set pitch
+                speechSynthesis.speak(speech); // Speak the error message
+            }
+        };
+
+        // Error handling for speech recognition issues
+        recognition.onerror = function(event) {
+            console.log("Error occurred in speech recognition: ", event.error);
+        };
+
+        // Automatically restart listening after each command
+        recognition.onend = function() {
+            recognition.start();
+        };
 
         // Automatically read instructions when page loads
         window.onload = function() {

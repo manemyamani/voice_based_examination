@@ -1,14 +1,15 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session, Response
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, Response, jsonify
 import sqlite3
 import cv2
 import face_recognition
 import numpy as np
 import os
 import time
+import hashlib
 
 app = Flask(__name__)
 #---------------------------
-DATABASE = "questions.db"
+DATABASE = "auraassist.db"
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
@@ -37,9 +38,80 @@ def create_table():
 
 create_table()
 
+# Ensure users table exists
+def create_users_table():
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            mobile TEXT NOT NULL,
+            date_of_birth TEXT NOT NULL,
+            gender TEXT NOT NULL,
+            password TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+create_users_table()
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(stored_password, provided_password):
+    return stored_password == hash_password(provided_password)
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        try:
+            first_name = request.form["first_name"]
+            last_name = request.form["last_name"]
+            email = request.form["email"]
+            mobile = request.form["mobile"]
+            date_of_birth = request.form["date_of_birth"]
+            gender = request.form["gender"]
+            password = request.form["password"]
+            confirm_password = request.form["confirm_password"]
+
+            if password != confirm_password:
+                return jsonify({"error": "Passwords do not match!"}), 400
+
+            conn = sqlite3.connect(DATABASE)
+            cursor = conn.cursor()
+
+            # Check if email already exists
+            cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+            existing_user = cursor.fetchone()
+
+            if existing_user:
+                conn.close()
+                return jsonify({"error": "Email already registered!"}), 400
+
+            hashed_password = hash_password(password)
+
+            cursor.execute('''
+                INSERT INTO users (first_name, last_name, email, mobile, date_of_birth, gender, password)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (first_name, last_name, email, mobile, date_of_birth, gender, hashed_password))
+
+            conn.commit()
+            conn.close()
+
+            return jsonify({"success": "User registered successfully!"}), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    return render_template("register.html")
+
 @app.route("/admin", methods=["GET"])
 def serve_homepage():
     return render_template("admin.html")
+
 
 @app.route("/submit_question/", methods=["POST"])
 def submit_question():
@@ -184,50 +256,42 @@ def instructions_page():
     else:
         return redirect(url_for('landing_page'))
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
 
         conn = connect_db()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM users WHERE email = ? AND password = ?', (email, password))
+        cursor.execute("SELECT id, password FROM users WHERE email = ?", (email,))
         user = cursor.fetchone()
         conn.close()
 
-        if user:
-            return redirect(url_for('landing_page'))
-        else:
-            return jsonify({'error': 'Invalid email or password!'}), 401
-    return render_template('login.html')
+        if user and verify_password(user[1], password):
+            session['user_id'] = user[0]  # Store user session
+            print(f"User {user[0]} logged in")  # Debugging log
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        first_name = request.form['first_name']
-        last_name = request.form['last_name']
-        email = request.form['email']
-        mobile = request.form['mobile']
-        date_of_birth = request.form['date_of_birth']
-        gender = request.form['gender']
-        password = request.form['password']
-        confirm_password = request.form['confirm_password']
+            # Check if the request is AJAX (fetch)
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({"redirect_url": url_for("host_page")})
+            else:
+                return redirect(url_for("host_page"))  # Regular form submission
 
-        if password != confirm_password:
-            return jsonify({'error': 'Passwords do not match!'}), 400
+        return jsonify({"error": "Invalid email or password!"}), 401
 
-        conn = connect_db()
-        cursor = conn.cursor()
-        cursor.execute(''' 
-            INSERT INTO users (first_name, last_name, email, mobile, date_of_birth, gender, password)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (first_name, last_name, email, mobile, date_of_birth, gender, password))
-        conn.commit()
-        conn.close()
+    return render_template("login.html")
 
-        return jsonify({'success': 'User registered successfully!'}), 200
-    return render_template('register.html')
+@app.route("/logout")
+def logout():
+    session.pop('user_id', None)
+    return redirect(url_for('login'))
+
+@app.route("/host")
+def host_page():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    return render_template("host.html")
 
 def start_camera():
     global cap

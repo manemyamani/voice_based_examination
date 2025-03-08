@@ -7,6 +7,142 @@ import os
 import time
 
 app = Flask(__name__)
+#---------------------------
+DATABASE = "questions.db"
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+
+if not os.path.exists(TEMPLATES_DIR):
+    os.makedirs(TEMPLATES_DIR)
+
+
+def create_table():
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            question TEXT NOT NULL,
+            option1 TEXT NOT NULL,
+            option2 TEXT NOT NULL,
+            option3 TEXT NOT NULL,
+            option4 TEXT NOT NULL,
+            answer TEXT NOT NULL,
+            subject TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+create_table()
+
+@app.route("/admin", methods=["GET"])
+def serve_homepage():
+    return render_template("admin.html")
+
+@app.route("/submit_question/", methods=["POST"])
+def submit_question():
+    try:
+        question = request.form["question"]
+        option1 = request.form["option1"]
+        option2 = request.form["option2"]
+        option3 = request.form["option3"]
+        option4 = request.form["option4"]
+        answer = request.form["answer"]
+        subject = request.form["subject"]
+
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO questions (question, option1, option2, option3, option4, answer, subject)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (question, option1, option2, option3, option4, answer, subject))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({"message": "Question added successfully!"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route("/exam")
+def home():
+    return render_template("exam.html") 
+@app.route("/get_questions", methods=["GET"])
+def get_questions():
+    try:
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM questions")
+        questions = cursor.fetchall()
+        conn.close()
+
+        # Convert data into a list of dictionaries
+        question_list = [
+            {
+                "id": row[0],
+                "question": row[1],
+                "option1": row[2],
+                "option2": row[3],
+                "option3": row[4],
+                "option4": row[5],
+                "answer": row[6],
+                "subject": row[7],
+            }
+            for row in questions
+        ]
+
+        return jsonify(question_list)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+
+import sqlite3
+
+def create_response_table():
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS responses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            question_id INTEGER NOT NULL,
+            selected_option TEXT NOT NULL,
+            FOREIGN KEY (question_id) REFERENCES questions(id)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+# Call the function to create the table
+create_response_table()
+
+@app.route("/submit_answer", methods=["POST"])
+def submit_answer():
+    try:
+        data = request.json
+        question_id = data.get("question_id")
+        selected_option = data.get("selected_option")
+
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO responses (question_id, selected_option)
+            VALUES (?, ?)
+        ''', (question_id, selected_option))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({"message": "Answer submitted successfully!"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+#---------------------------
 app.secret_key = 'your_secret_key'  # Required for session management
 
 KNOWN_FACES_DIR = "known_faces"
@@ -175,6 +311,7 @@ def generate_frames():
 @app.route('/video_feed')  
 def video_feed():  
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')  
+
 
 if __name__ == '__main__':
     app.run(debug=True)

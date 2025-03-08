@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Exam</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            width: 100%;
+            margin: 0;
+            background-color: white;
+        }
+        header {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .exam-title {
+            text-align: center;
+            flex-grow: 1;
+        }
+        .mock-exam-label {
+            background-color: #f39c12;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-left: 5px;
+        }
+        .navigation {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+        }
+        .nav-item {
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        .topics {
+            background-color: #f39c12;
+            color: white;
+        }
+        .main-content {
+            display: flex;
+        }
+        .question-panel, .options-panel {
+            flex: 2;
+            padding: 20px;
+        }
+        .question-box, .options-box {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .options label {
+            display: block;
+            padding: 8px;
+            border-radius: 5px;
+            background-color: #f1f1f1;
+            margin: 5px 0;
+            cursor: pointer;
+            text-align: left;
+        }
+        .options input {
+            margin-right: 10px;
+        }
+        .bottom-navigation {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: #f8f8f8;
+        }
+        .save-next-btn {
+            background-color: #2ecc71;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .help-section {
+            display: flex;
+            justify-content: flex-end;
+            padding: 10px;
+        }
+        .help-link {
+            color: #3498db;
+            margin-left: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="exam-title">JEE MAINS<span class="mock-exam-label">mains Exam</span></div>
+        <button class="submit-btn">Submit</button>
+    </header>
+    
+    <div class="navigation">
+        <div class="nav-item topics">Topics</div>
+        <div class="nav-item active">MATHEMATICS</div>
+        <div class="nav-item">PHYSICS</div>
+        <div class="nav-item">CHEMISTRY</div>
+    </div>
+    
+    <div class="container">
+        <div class="main-content">
+            <div class="question-panel">
+                <div class="question-box">
+                    <p><strong>Question <span id="question-number">1</span></strong></p>
+                    <div id="question-text">Loading...</div>
+                </div>
+            </div>
+            
+            <div class="options-panel">
+                <div class="options-box">
+                    <p>Options</p>
+                </div>
+                <div class="options">
+                    <label><input type="radio" name="option" value="1"> <span id="opt1"></span></label>
+                    <label><input type="radio" name="option" value="2"> <span id="opt2"></span></label>
+                    <label><input type="radio" name="option" value="3"> <span id="opt3"></span></label>
+                    <label><input type="radio" name="option" value="4"> <span id="opt4"></span></label>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bottom-navigation">
+        <button id="next" class="save-next-btn">Next</button>
+    </div>
+    
+    <div class="help-section">
+        <div class="help-link">Help</div>
+        <div class="help-link">Instructions</div>
+    </div>
+    
+    <script>
+        let questions = [];
+        let currentQuestionIndex = 0;
+        function loadQuestion() {
+            if (questions.length === 0) {
+                document.getElementById("question-text").innerText = "No questions available.";
+                return;
+            }
+            if (currentQuestionIndex < questions.length) {
+                let questionData = questions[currentQuestionIndex];
+                document.getElementById("question-number").innerText = currentQuestionIndex + 1;
+                document.getElementById("question-text").innerText = questionData.question;
+                document.getElementById("opt1").innerText = questionData.option1;
+                document.getElementById("opt2").innerText = questionData.option2;
+                document.getElementById("opt3").innerText = questionData.option3;
+                document.getElementById("opt4").innerText = questionData.option4;
+            } else {
+                alert("Exam Completed!");
+            }
+        }
+        $(document).ready(function () {
+            $.getJSON("http://127.0.0.1:5000/get_questions")
+                .done(function (data) {
+                    questions = data;
+                    if (questions.length === 0) {
+                        alert("No questions available.");
+                    } else {
+                        loadQuestion();
+                    }
+                })
+                .fail(function () {
+                    alert("Failed to retrieve questions. Please check the API.");
+                });
+            $("#next").click(function () {
+                if (currentQuestionIndex < questions.length - 1) {
+                    currentQuestionIndex++;
+                    loadQuestion();
+                } else {
+                    alert("You have completed the exam.");
+                }
+            });
+        });
+    </script>
+    <script>
+        $(document).ready(function () {
+            function submitAnswer() {
+                let selectedOption = $("input[name='option']:checked").val();
+                if (!selectedOption) {
+                    alert("Please select an answer before proceeding.");
+                    return;
+                }
+    
+                let questionId = questions[currentQuestionIndex].id;
+    
+                $.ajax({
+                    url: "http://127.0.0.1:5000/submit_answer",
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({
+                        question_id: questionId,
+                        selected_option: selectedOption
+                    }),
+                    success: function (response) {
+                        console.log(response.message);
+                    },
+                    error: function (xhr) {
+                        console.error("Error submitting answer:", xhr.responseText);
+                    }
+                });
+            }
+    
+            $("#next").click(function () {
+                submitAnswer();
+                if (currentQuestionIndex < questions.length - 1) {
+                    currentQuestionIndex++;
+                    loadQuestion();
+                } else {
+                    alert("You have completed the exam.");
+                }
+            });
+        });
+    </script>
+</body>
+</html>

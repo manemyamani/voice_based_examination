@@ -108,21 +108,26 @@ def register():
 
     return render_template("register.html")
 
-@app.route("/admin", methods=["GET"])
-def serve_homepage():
-    return render_template("admin.html")
 
 
 @app.route("/submit_question/", methods=["POST"])
 def submit_question():
     try:
-        question = request.form["question"]
-        option1 = request.form["option1"]
-        option2 = request.form["option2"]
-        option3 = request.form["option3"]
-        option4 = request.form["option4"]
-        answer = request.form["answer"]
-        subject = request.form["subject"]
+        data = request.get_json()  # Read JSON data
+
+        # Debugging: Print incoming data
+        print("Incoming JSON:", data)
+
+        question = data.get("question")
+        option1 = data.get("option1")
+        option2 = data.get("option2")
+        option3 = data.get("option3")
+        option4 = data.get("option4")
+        answer = data.get("answer")
+        subject = data.get("subject")
+
+        if not all([question, option1, option2, option3, option4, answer, subject]):
+            return jsonify({"error": "All fields are required!"}), 400
 
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
@@ -137,7 +142,8 @@ def submit_question():
         return jsonify({"message": "Question added successfully!"})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route("/exam")
 def home():

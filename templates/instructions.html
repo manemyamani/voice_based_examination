@@ -50,26 +50,7 @@
         <h2>Instructions for SmartAura Examination System.</h2>
         <h3>General Guidelines.</h3>
         <ul>
-            <li>Use voice commands like "Next question" and "Repeat question" for navigation.</li>
-            <li>Exam duration: [120 minutes], with voice alerts for time tracking.</li>
-            <li>Answer by saying "Option A," "Option B," "Option C","Option D" and confirm with "Lock answer."</li>
-            <li>Skip a question by saying "Skip question."</li>
             <li>Navigate back to a previous question by saying "Previous question."</li>
-        </ul>
-        <h3>Exam Rules</h3>
-        <ul>
-            <li>No external assistance is allowed.</li>
-            <li>Exam cannot be paused once started.</li>
-        </ul>
-        <h3>Accessibility-Specific Features</h3>
-        <ul>
-            <li>Speak clearly for optimal system response.</li>
-            <li>The system will confirm commands vocally.</li>
-        </ul>
-        <h3>Submission Guidelines</h3>
-        <ul>
-            <li>Exam auto-submits when time is up.</li>
-            <li>Manually submit by saying "Submit exam" and confirm with "Yes, submit."</li>
         </ul>
         <h3>Acknowledgment</h3>
         <p>By proceeding, you agree to follow the rules and guidelines.</p>
@@ -102,26 +83,41 @@
         recognition.lang = 'en-US'; // Set language to English
         recognition.continuous = false; // Stop after one command
         recognition.interimResults = false; // Do not show partial results
+        let errorTimer; // Stores the timeout ID for the 40-second delay
 
-        // Start listening for speech
-        recognition.start();
+// Function to start the 40-second countdown for the error message
+function startErrorTimer() {
+    clearTimeout(errorTimer); // Reset the previous timer if any
+    errorTimer = setTimeout(() => {
+        speakErrorMessage();
+    }, 40000); // Speak error message after 40 seconds
+}
 
-        // When speech is detected and recognized
-        recognition.onresult = function(event) {
-            const command = event.results[0][0].transcript.toLowerCase(); // Convert to lowercase
+// Function to speak the error message
+function speakErrorMessage() {
+    const speech = new SpeechSynthesisUtterance("Command not recognized. Please try again.");
+    speech.lang = "en-US";
+    speech.rate = 1.0;
+    speech.volume = 1;
+    speech.pitch = 1;
+    speechSynthesis.speak(speech);
+}
 
-            // Check if the command is "start exam"
-            if (command === "start exam") {
-                startExam();  // Start the exam
-            } else {
-                const speech = new SpeechSynthesisUtterance("Command not recognized. Please try again.");
-                speech.lang = "en-US"; // Set language
-                speech.rate = 1.0; // Adjust speed
-                speech.volume = 1; // Set volume
-                speech.pitch = 1; // Set pitch
-                speechSynthesis.speak(speech); // Speak the error message
-            }
-        };
+// Start listening for speech
+recognition.start();
+startErrorTimer(); // Start the initial error message countdown
+
+// When speech is detected and recognized
+recognition.onresult = function(event) {
+    const command = event.results[0][0].transcript.toLowerCase();
+
+    if (command === "start exam") {
+        startExam();
+    } else {
+        startErrorTimer(); // Reset the timer if command is not recognized
+    }
+};
+
 
         // Error handling for speech recognition issues
         recognition.onerror = function(event) {
@@ -136,6 +132,7 @@
         // Automatically read instructions when page loads
         window.onload = function() {
             readInstructions();
+            startErrorTimer();
         };
     </script>
 </body>

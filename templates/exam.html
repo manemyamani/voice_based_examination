@@ -148,6 +148,45 @@
     </div>
     
     <script>
+        function readInstructions() {
+    setTimeout(() => {
+        // Get question number and question text
+        const questionNumber = document.getElementById("question-number").innerText;
+        const questionText = document.getElementById("question-text").innerText.trim();
+
+        // Get options text
+        const opt1 = document.getElementById("opt1").innerText.trim();
+        const opt2 = document.getElementById("opt2").innerText.trim();
+        const opt3 = document.getElementById("opt3").innerText.trim();
+        const opt4 = document.getElementById("opt4").innerText.trim();
+
+        // Check if the question and options are properly loaded
+        if (!questionText || !opt1 || !opt2 || !opt3 || !opt4) {
+            console.warn("Content not loaded properly. Retrying...");
+            readInstructions(); // Retry reading if content is not loaded
+            return;
+        }
+
+        // Construct text to be spoken
+        const speechText = `Question ${questionNumber}. ${questionText}. 
+        Option 1: ${opt1}. 
+        Option 2: ${opt2}. 
+        Option 3: ${opt3}. 
+        Option 4: ${opt4}.`;
+
+        // Create speech synthesis object
+        const speech = new SpeechSynthesisUtterance(speechText);
+        speech.lang = "en-US"; // Set language
+        speech.rate = 1.0; // Adjust speed
+        speech.volume = 1; // Set volume
+        speech.pitch = 1; // Set pitch
+
+        // Speak the text
+        speechSynthesis.speak(speech);
+    }, 500); // Small delay to allow content to load
+}
+
+
         let questions = [];
         let currentQuestionIndex = 0;
         function loadQuestion() {
@@ -189,6 +228,9 @@
                 }
             });
         });
+        window.onload = function() {
+            readInstructions();
+        };
     </script>
     <script>
         $(document).ready(function () {

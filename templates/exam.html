@@ -90,15 +90,21 @@
             cursor: pointer;
             font-size: 16px;
         }
-        .help-section {
-            display: flex;
-            justify-content: flex-end;
-            padding: 10px;
+        .selected {
+            background-color: #FFD700 !important;
         }
-        .help-link {
-            color: #3498db;
-            margin-left: 20px;
-            cursor: pointer;
+        #debug-log {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            max-width: 300px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+            display: none;
         }
     </style>
 </head>
@@ -129,10 +135,10 @@
                     <p>Options</p>
                 </div>
                 <div class="options">
-                    <label><input type="radio" name="option" value="1"> <span id="opt1"></span></label>
-                    <label><input type="radio" name="option" value="2"> <span id="opt2"></span></label>
-                    <label><input type="radio" name="option" value="3"> <span id="opt3"></span></label>
-                    <label><input type="radio" name="option" value="4"> <span id="opt4"></span></label>
+                    <label for="opt1"><input type="radio" name="option" id="opt1" value="1"> <span id="opt1-text"></span></label>
+                    <label for="opt2"><input type="radio" name="option" id="opt2" value="2"> <span id="opt2-text"></span></label>
+                    <label for="opt3"><input type="radio" name="option" id="opt3" value="3"> <span id="opt3-text"></span></label>
+                    <label for="opt4"><input type="radio" name="option" id="opt4" value="4"> <span id="opt4-text"></span></label>
                 </div>
             </div>
         </div>
@@ -142,133 +148,230 @@
         <button id="next" class="save-next-btn">Next</button>
     </div>
     
-    <div class="help-section">
-        <div class="help-link">Help</div>
-        <div class="help-link">Instructions</div>
-    </div>
+    <div id="debug-log"></div>
     
     <script>
-        function readInstructions() {
-    setTimeout(() => {
-        // Get question number and question text
-        const questionNumber = document.getElementById("question-number").innerText;
-        const questionText = document.getElementById("question-text").innerText.trim();
-
-        // Get options text
-        const opt1 = document.getElementById("opt1").innerText.trim();
-        const opt2 = document.getElementById("opt2").innerText.trim();
-        const opt3 = document.getElementById("opt3").innerText.trim();
-        const opt4 = document.getElementById("opt4").innerText.trim();
-
-        // Check if the question and options are properly loaded
-        if (!questionText || !opt1 || !opt2 || !opt3 || !opt4) {
-            console.warn("Content not loaded properly. Retrying...");
-            readInstructions(); // Retry reading if content is not loaded
-            return;
-        }
-
-        // Construct text to be spoken
-        const speechText = `Question ${questionNumber}. ${questionText}. 
-        Option 1: ${opt1}. 
-        Option 2: ${opt2}. 
-        Option 3: ${opt3}. 
-        Option 4: ${opt4}.`;
-
-        // Create speech synthesis object
-        const speech = new SpeechSynthesisUtterance(speechText);
-        speech.lang = "en-US"; // Set language
-        speech.rate = 1.0; // Adjust speed
-        speech.volume = 1; // Set volume
-        speech.pitch = 1; // Set pitch
-
-        // Speak the text
-        speechSynthesis.speak(speech);
-    }, 500); // Small delay to allow content to load
-}
-
-
         let questions = [];
         let currentQuestionIndex = 0;
-        function loadQuestion() {
-            if (questions.length === 0) {
-                document.getElementById("question-text").innerText = "No questions available.";
-                return;
-            }
-            if (currentQuestionIndex < questions.length) {
-                let questionData = questions[currentQuestionIndex];
-                document.getElementById("question-number").innerText = currentQuestionIndex + 1;
-                document.getElementById("question-text").innerText = questionData.question;
-                document.getElementById("opt1").innerText = questionData.option1;
-                document.getElementById("opt2").innerText = questionData.option2;
-                document.getElementById("opt3").innerText = questionData.option3;
-                document.getElementById("opt4").innerText = questionData.option4;
-            } else {
-                alert("Exam Completed!");
+        let debugMode = false; // Set to true to show debug console
+
+        function log(message) {
+            if (debugMode) {
+                const logDiv = document.getElementById('debug-log');
+                logDiv.style.display = 'block';
+                logDiv.innerHTML += message + '<br>';
+                logDiv.scrollTop = logDiv.scrollHeight;
+                console.log(message);
             }
         }
+
+        function speakText(text) {
+            // Cancel any ongoing speech first
+            speechSynthesis.cancel();
+            
+            const speech = new SpeechSynthesisUtterance(text);
+            speech.lang = "en-US";
+            speechSynthesis.speak(speech);
+        }
+
+        function readInstructions() {
+            const questionNumber = document.getElementById("question-number").innerText;
+            const questionText = document.getElementById("question-text").innerText.trim();
+
+            const opt1 = document.getElementById("opt1-text").innerText.trim();
+            const opt2 = document.getElementById("opt2-text").innerText.trim();
+            const opt3 = document.getElementById("opt3-text").innerText.trim();
+            const opt4 = document.getElementById("opt4-text").innerText.trim();
+
+            const speechText = `Question ${questionNumber}. ${questionText}. 
+            Option 1: ${opt1}. 
+            Option 2: ${opt2}. 
+            Option 3: ${opt3}. 
+            Option 4: ${opt4}.`;
+
+            speakText(speechText);
+        }
+
+        function loadQuestion() {
+            if (questions.length === 0) return;
+            
+            let questionData = questions[currentQuestionIndex];
+            document.getElementById("question-number").innerText = currentQuestionIndex + 1;
+            document.getElementById("question-text").innerText = questionData.question;
+            document.getElementById("opt1-text").innerText = questionData.option1;
+            document.getElementById("opt2-text").innerText = questionData.option2;
+            document.getElementById("opt3-text").innerText = questionData.option3;
+            document.getElementById("opt4-text").innerText = questionData.option4;
+
+            // Clear any selected options
+            document.querySelectorAll('input[name="option"]').forEach(input => {
+                input.checked = false;
+            });
+            document.querySelectorAll(".options label").forEach(label => {
+                label.classList.remove("selected");
+            });
+
+            setTimeout(readInstructions, 500);
+        }
+        
+        function selectOption(optionId) {
+            // First clear any existing selections
+            document.querySelectorAll(".options label").forEach(label => label.classList.remove("selected"));
+            document.querySelectorAll('input[name="option"]').forEach(input => {
+                input.checked = false;
+            });
+            
+            // Then select the new option
+            document.getElementById(optionId).checked = true;
+            document.querySelector(`label[for="${optionId}"]`).classList.add("selected");
+            
+            // Speak confirmation
+            const optionNumber = optionId.replace("opt", "");
+            speakText(`Option ${optionNumber} has been marked.`);
+        }
+
         $(document).ready(function () {
+            // Make debug panel visible if debug mode is on
+            if (debugMode) {
+                document.getElementById('debug-log').style.display = 'block';
+            }
+            
             $.getJSON("http://127.0.0.1:5000/get_questions")
                 .done(function (data) {
                     questions = data;
-                    if (questions.length === 0) {
-                        alert("No questions available.");
-                    } else {
-                        loadQuestion();
-                    }
+                    loadQuestion();
                 })
-                .fail(function () {
-                    alert("Failed to retrieve questions. Please check the API.");
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    log("Error fetching questions: " + textStatus + " - " + errorThrown);
+                    // Create a minimal question for testing if database fetch fails
+                    questions = [{
+                        question: "Loading questions failed. This is a placeholder.",
+                        option1: "Option 1",
+                        option2: "Option 2",
+                        option3: "Option 3",
+                        option4: "Option 4"
+                    }];
+                    loadQuestion();
                 });
+
             $("#next").click(function () {
                 if (currentQuestionIndex < questions.length - 1) {
                     currentQuestionIndex++;
                     loadQuestion();
                 } else {
-                    alert("You have completed the exam.");
+                    alert("Exam Completed!");
+                    speakText("Exam Completed!");
                 }
+            });
+            
+            // Add click handlers for options
+            $('input[name="option"]').change(function() {
+                const optionId = $(this).attr('id');
+                selectOption(optionId);
             });
         });
-        window.onload = function() {
-            readInstructions();
-        };
-    </script>
-    <script>
-        $(document).ready(function () {
-            function submitAnswer() {
-                let selectedOption = $("input[name='option']:checked").val();
-                if (!selectedOption) {
-                    alert("Please select an answer before proceeding.");
+
+        window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.lang = "en-US";
+        
+        // Fix to prevent multiple listeners
+        let recognitionRunning = false;
+
+        function processSpeechCommand(transcript) {
+            log("Recognized: " + transcript);
+            
+            // Define clear patterns for each option
+            const option1Patterns = ["mark option 1", "select option 1", "option 1", "option one", "first option", "choice 1", "answer 1"];
+            const option2Patterns = ["mark option 2", "select option 2", "option 2", "option two", "second option", "choice 2", "answer 2"];
+            const option3Patterns = ["mark option 3", "select option 3", "option 3", "option three", "third option", "choice 3", "answer 3"];
+            const option4Patterns = ["mark option 4", "select option 4", "option 4", "option four", "fourth option", "choice 4", "answer 4", "option for"];
+            
+            // Check if transcript exactly matches any pattern
+            // The exact matching approach helps prevent confusion between options
+            
+            // Check option 4 first (since it was problematic)
+            for (let pattern of option4Patterns) {
+                if (transcript.includes(pattern)) {
+                    log("Selecting option 4");
+                    selectOption("opt4");
                     return;
                 }
-    
-                let questionId = questions[currentQuestionIndex].id;
-    
-                $.ajax({
-                    url: "http://127.0.0.1:5000/submit_answer",
-                    type: "POST",
-                    contentType: "application/json",
-                    data: JSON.stringify({
-                        question_id: questionId,
-                        selected_option: selectedOption
-                    }),
-                    success: function (response) {
-                        console.log(response.message);
-                    },
-                    error: function (xhr) {
-                        console.error("Error submitting answer:", xhr.responseText);
-                    }
-                });
             }
-    
-            $("#next").click(function () {
-                submitAnswer();
-                if (currentQuestionIndex < questions.length - 1) {
-                    currentQuestionIndex++;
-                    loadQuestion();
-                } else {
-                    alert("You have completed the exam.");
+            
+            // Then check other options
+            for (let pattern of option3Patterns) {
+                if (transcript.includes(pattern)) {
+                    log("Selecting option 3");
+                    selectOption("opt3");
+                    return;
                 }
-            });
+            }
+            
+            for (let pattern of option2Patterns) {
+                if (transcript.includes(pattern)) {
+                    log("Selecting option 2");
+                    selectOption("opt2");
+                    return;
+                }
+            }
+            
+            for (let pattern of option1Patterns) {
+                if (transcript.includes(pattern)) {
+                    log("Selecting option 1");
+                    selectOption("opt1");
+                    return;
+                }
+            }
+            
+            // Check for other commands
+            if (transcript.includes("next") || transcript.includes("next question")) {
+                log("Going to next question");
+                document.getElementById("next").click();
+            } else if (transcript.includes("read question") || transcript.includes("repeat question")) {
+                log("Reading question");
+                readInstructions();
+            }
+        }
+
+        recognition.onresult = function (event) {
+            const last = event.results.length - 1;
+            let transcript = event.results[last][0].transcript.trim().toLowerCase();
+            processSpeechCommand(transcript);
+        };
+
+        recognition.onend = function() {
+            // Prevent multiple recognition instances
+            if (recognitionRunning) {
+                log("Recognition restarted");
+                recognition.start();
+            }
+        };
+
+        recognition.onerror = function(event) {
+            log("Recognition error: " + event.error);
+            // If there's an error, wait a bit before restarting
+            setTimeout(() => {
+                if (recognitionRunning) {
+                    recognition.start();
+                }
+            }, 1000);
+        };
+
+        // Start speech recognition
+        recognitionRunning = true;
+        recognition.start();
+        
+        // Add a keyboard shortcut (press D key) to toggle debug mode
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'd' && e.ctrlKey) {
+                debugMode = !debugMode;
+                document.getElementById('debug-log').style.display = debugMode ? 'block' : 'none';
+                if (debugMode) {
+                    log("Debug mode activated");
+                }
+            }
         });
     </script>
 </body>

@@ -18,12 +18,13 @@ if not os.path.exists(TEMPLATES_DIR):
     os.makedirs(TEMPLATES_DIR)
 
 
-def create_table():
+def create_table(): 
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS questions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            assessment_id INTEGER NOT NULL,  -- Added assessment_id column
             question TEXT NOT NULL,
             option1 TEXT NOT NULL,
             option2 TEXT NOT NULL,
@@ -110,36 +111,32 @@ def register():
 
 
 
-@app.route("/submit_question/", methods=["POST"])
+@app.route('/submit_question/', methods=['POST'])
 def submit_question():
     try:
-        data = request.get_json()  # Read JSON data
+        data = request.json
 
-        # Debugging: Print incoming data
-        print("Incoming JSON:", data)
+        # Extract values from request
+        assessment_id = data.get('assessment_id')  # Get assessment_id
+        question = data.get('question')
+        option1 = data.get('option1')
+        option2 = data.get('option2')
+        option3 = data.get('option3')
+        option4 = data.get('option4')
+        answer = data.get('answer')
+        subject = data.get('subject')
 
-        question = data.get("question")
-        option1 = data.get("option1")
-        option2 = data.get("option2")
-        option3 = data.get("option3")
-        option4 = data.get("option4")
-        answer = data.get("answer")
-        subject = data.get("subject")
-
-        if not all([question, option1, option2, option3, option4, answer, subject]):
-            return jsonify({"error": "All fields are required!"}), 400
-
-        conn = sqlite3.connect(DATABASE)
+        # Insert into the database
+        conn = connect_db()
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO questions (question, option1, option2, option3, option4, answer, subject)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (question, option1, option2, option3, option4, answer, subject))
-
+            INSERT INTO questions (assessment_id, question, option1, option2, option3, option4, answer, subject)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (assessment_id, question, option1, option2, option3, option4, answer, subject))
         conn.commit()
         conn.close()
 
-        return jsonify({"message": "Question added successfully!"})
+        return jsonify({"message": "Question submitted successfully!"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

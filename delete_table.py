@@ -6,10 +6,10 @@ def delete_questions_table():
     try:
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
-        cursor.execute("DROP TABLE IF EXISTS responses;")
+        cursor.execute("DROP TABLE IF EXISTS questions;")
         conn.commit()
         conn.close()
-        print("✅ Table 'responses' deleted successfully.")
+        print("✅ Table 'questions' deleted successfully.")
     except Exception as e:
         print("❌ Error:", str(e))
 

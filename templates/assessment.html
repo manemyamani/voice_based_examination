@@ -21,6 +21,26 @@
       border-radius: 15px;
       box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
       width: 400px;
+      position: relative;
+    }
+
+    .logout-container {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+    }
+
+    .btn-logout {
+      background-color: #dc3545;
+      color: white;
+      font-weight: bold;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 5px;
+    }
+
+    .btn-logout:hover {
+      background-color: #c82333;
     }
 
     h2 {
@@ -44,6 +64,11 @@
 <body>
 
   <div class="container">
+    <!-- Logout Button -->
+    <div class="logout-container">
+      <button id="logout-btn" class="btn btn-logout">Logout</button>
+    </div>
+
     <h2>Set Assessment Details</h2>
     <form id="assessment-form">
       <div class="mb-3">
@@ -68,7 +93,16 @@
 
       // Redirect to host.html with query parameters
       window.location.href = `/host?assessmentId=${encodeURIComponent(assessmentId)}&questionCount=${encodeURIComponent(questionCount)}`;
+    });
 
+    // Logout button functionality
+    document.getElementById("logout-btn").addEventListener("click", async function() {
+      let response = await fetch("/logout", { method: "GET", credentials: "same-origin" });
+      if (response.ok) {
+        window.location.href = "/login";  // Redirect after logout
+      } else {
+        console.error("Logout failed", response);
+      }
     });
   </script>
 

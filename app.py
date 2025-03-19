@@ -296,6 +296,33 @@ def assessment():
 
     return render_template("assessment.html")
 
+# Function to get the next assessment ID
+def get_next_assessment_id():
+    try:
+        conn = sqlite3.connect(DATABASE)  # Use the correct database
+        cursor = conn.cursor()
+
+        # Query to get the max assessment_id from the questions table
+        cursor.execute("SELECT MAX(assessment_id) FROM questions")
+        max_id = cursor.fetchone()[0]
+
+        conn.close()
+
+        # If no records exist, start from 1, otherwise increment max_id
+        return (max_id + 1) if max_id else 1
+
+    except Exception as e:
+        print("Error fetching next assessment ID:", e)
+        return None
+
+@app.route("/get_next_assessment_id", methods=["GET"])
+def get_next_assessment():
+    next_id = get_next_assessment_id()
+    if next_id is None:
+        return jsonify({"error": "Failed to retrieve next assessment ID"}), 500
+
+    return jsonify({"next_assessment_id": next_id})
+
 @app.route("/logout")
 def logout():
     session.pop('user_id', None)

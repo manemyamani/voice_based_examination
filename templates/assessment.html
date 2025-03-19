@@ -84,17 +84,32 @@
   </div>
 
   <script>
+    document.addEventListener("DOMContentLoaded", async function() {
+      try {
+        let response = await fetch("/get_next_assessment_id");
+        let data = await response.json();
+  
+        if (response.ok) {
+          document.getElementById("assessmentId").value = data.next_assessment_id;
+        } else {
+          console.error("Failed to fetch assessment ID:", data.error);
+        }
+      } catch (error) {
+        console.error("Error fetching next assessment ID:", error);
+      }
+    });
+  
     document.getElementById("assessment-form").addEventListener("submit", function(event) {
       event.preventDefault();
-
+  
       // Get form values
       const assessmentId = document.getElementById("assessmentId").value;
       const questionCount = document.getElementById("questionCount").value;
-
+  
       // Redirect to host.html with query parameters
       window.location.href = `/host?assessmentId=${encodeURIComponent(assessmentId)}&questionCount=${encodeURIComponent(questionCount)}`;
     });
-
+  
     // Logout button functionality
     document.getElementById("logout-btn").addEventListener("click", async function() {
       let response = await fetch("/logout", { method: "GET", credentials: "same-origin" });
@@ -105,6 +120,7 @@
       }
     });
   </script>
+  
 
 </body>
 </html>

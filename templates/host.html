@@ -141,8 +141,16 @@
 </div>
 
 <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const maxQuestions = parseInt(urlParams.get("questionCount")) || 0;
+
+let questionCount = 0;
     document.getElementById("question-form").addEventListener("submit", async function(event) {
     event.preventDefault();
+    if (questionCount >= maxQuestions) {
+    alert(`❗ Maximum limit of ${maxQuestions} questions reached!`);
+    return;
+  }
 
     let formData = new FormData(this);
     let data = Object.fromEntries(formData.entries());
@@ -160,11 +168,16 @@
     if (response.ok) {
         document.getElementById("success-alert").style.display = "block";
         this.reset();
+        questionCount++;
 
         setTimeout(() => {
             document.getElementById("success-alert").style.display = "none";
         }, 3000);
-    } else {
+        if (questionCount >= maxQuestions) {
+      alert(`✅ All ${maxQuestions} questions submitted!`);
+    }
+  }
+     else {
         console.error("Error submitting:", result);
     }
 });

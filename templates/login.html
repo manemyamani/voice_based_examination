@@ -87,8 +87,8 @@ main {
             if (data.error) {
               document.getElementById("error-message").innerText = data.error;
             }
-            else if (data.redirect_url) {
-              window.location.href = data.redirect_url;  // ✅ Redirect correctly
+            else {
+              window.location.href = "/assessment"; // ✅ Redirect correctly
               }
             })
             .catch(error => console.error("Error:", error));

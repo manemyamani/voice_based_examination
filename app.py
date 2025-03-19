@@ -282,11 +282,22 @@ def login():
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 return jsonify({"redirect_url": url_for("host_page")})
             else:
-                return redirect(url_for("host_page"))  # Regular form submission
+                return redirect(url_for("assessment"))  # Regular form submission
 
         return jsonify({"error": "Invalid email or password!"}), 401
 
     return render_template("login.html")
+@app.route("/assessment", methods=["GET", "POST"])
+def assessment():
+    if request.method == "POST":
+        # Handle assessment submission logic
+        assessment_id = request.form["assessmentId"]
+        question_count = request.form["questionCount"]
+
+        # Redirect to host.html after setting assessment
+        return redirect(url_for("host_page", assessmentId=assessment_id, questionCount=question_count))
+
+    return render_template("assessment.html")
 
 @app.route("/logout")
 def logout():
@@ -295,9 +306,10 @@ def logout():
 
 @app.route("/host")
 def host_page():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    return render_template("host.html")
+    assessment_id = request.args.get("assessmentId")
+    question_count = request.args.get("questionCount")
+    return render_template("host.html", assessment_id=assessment_id, question_count=question_count)
+
 
 def start_camera():
     global cap

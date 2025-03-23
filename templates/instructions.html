@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -19,12 +19,12 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             margin: auto;
         }
-        h2,h3,p {
+        h2, h3, p {
             text-align: center;
         }
         ul {
             text-align: center;
-            list-style-position: inside; /* Align list items to center */
+            list-style-position: inside;
             padding: 0;
         }
         .button-container {
@@ -55,85 +55,88 @@
         <h3>Acknowledgment</h3>
         <p>By proceeding, you agree to follow the rules and guidelines.</p>
         <div class="button-container">
-            <button class="start-button">if you are ready to begin the test,then say,Start Exam</button>
+            <button id="startButton" class="start-button">If you are ready to begin the test, say "Start Exam"</button>
         </div>
     </div>
 
     <script>
         // Function to start the exam
         function startExam() {
-            window.location.href = "/exam";
-            // Redirect or start exam logic here
+            console.log("Redirecting to exam page...");
+            window.location.href = "/exam"; // Redirect to exam page
         }
 
         // Function to read text aloud
         function readInstructions() {
-            const text = document.body.innerText; // Get all text on the page
+            const text = document.body.innerText;
             const speech = new SpeechSynthesisUtterance(text);
-            speech.lang = "en-US"; // Set language
-            speech.rate = 1.0; // Adjust speed
-            speech.volume = 1; // Set volume
-            speech.pitch = 1; // Set pitch
-
-            speechSynthesis.speak(speech); // Start speaking
+            speech.lang = "en-US";
+            speech.rate = 1.0;
+            speech.volume = 1;
+            speech.pitch = 1;
+            speechSynthesis.speak(speech);
         }
 
-        // Initialize SpeechRecognition (for modern browsers like Chrome)
-        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.lang = 'en-US'; // Set language to English
-        recognition.continuous = false; // Stop after one command
-        recognition.interimResults = false; // Do not show partial results
-        let errorTimer; // Stores the timeout ID for the 40-second delay
+        // Initialize Speech Recognition
+        let recognition;
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.continuous = true;  // Keep listening after first result
+            recognition.interimResults = false;
+        } else {
+            alert("Speech recognition is not supported in this browser.");
+        }
 
-// Function to start the 40-second countdown for the error message
-function startErrorTimer() {
-    clearTimeout(errorTimer); // Reset the previous timer if any
-    errorTimer = setTimeout(() => {
-        speakErrorMessage();
-    }, 40000); // Speak error message after 40 seconds
-}
+        // Function to start listening
+        function startListening() {
+            if (recognition) {
+                console.log("Listening for commands...");
+                recognition.start();
+            }
+        }
 
-// Function to speak the error message
-function speakErrorMessage() {
-    const speech = new SpeechSynthesisUtterance("Command not recognized. Please try again.");
-    speech.lang = "en-US";
-    speech.rate = 1.0;
-    speech.volume = 1;
-    speech.pitch = 1;
-    speechSynthesis.speak(speech);
-}
+        // When speech is detected and recognized
+        recognition.onresult = function(event) {
+            let command = event.results[event.results.length - 1][0].transcript.toLowerCase();
+            console.log("Recognized command:", command);
 
-// Start listening for speech
-recognition.start();
-startErrorTimer(); // Start the initial error message countdown
+            if (command.includes("start exam")) {
+                startExam();
+            } else {
+                speakErrorMessage();
+            }
+        };
 
-// When speech is detected and recognized
-recognition.onresult = function(event) {
-    const command = event.results[0][0].transcript.toLowerCase();
+        // Function to speak an error message if command is unrecognized
+        function speakErrorMessage() {
+            const speech = new SpeechSynthesisUtterance("Command not recognized. Please try again.");
+            speech.lang = "en-US";
+            speech.rate = 1.0;
+            speech.volume = 1;
+            speech.pitch = 1;
+            speechSynthesis.speak(speech);
+        }
 
-    if (command === "start exam") {
-        startExam();
-    } else {
-        startErrorTimer(); // Reset the timer if command is not recognized
-    }
-};
-
-
-        // Error handling for speech recognition issues
+        // Error handling
         recognition.onerror = function(event) {
-            console.log("Error occurred in speech recognition: ", event.error);
+            console.error("Speech Recognition Error:", event.error);
+            if (event.error === "not-allowed") {
+                alert("Please allow microphone access and try again.");
+            }
         };
 
-        // Automatically restart listening after each command
         recognition.onend = function() {
-            recognition.start();
+            console.log("Speech recognition stopped. Restarting...");
+            setTimeout(startListening, 500); // Restart listening after a short delay
         };
 
-        // Automatically read instructions when page loads
+        // Automatically start speech recognition when page loads
         window.onload = function() {
             readInstructions();
-            startErrorTimer();
+            setTimeout(startListening, 3000); // Start listening after 3 seconds
         };
+
     </script>
 </body>
 </html>

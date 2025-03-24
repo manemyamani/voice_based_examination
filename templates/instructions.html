@@ -63,12 +63,20 @@
         // Function to start the exam
         function startExam() {
             console.log("Redirecting to exam page...");
-            window.location.href = "/exam"; // Redirect to exam page
+            speakText("Redirecting to the exam page.");
+            setTimeout(() => {
+                window.location.href = "/exam"; // Redirect after speaking
+            }, 2000);
         }
-
-        // Function to read text aloud
-        function readInstructions() {
-            const text = document.body.innerText;
+    
+        // Function to read the visible text on the page
+        function readPageContent() {
+            let pageText = document.body.innerText.trim(); // Get only visible text
+            speakText(pageText);
+        }
+    
+        // Function to read aloud a given text
+        function speakText(text) {
             const speech = new SpeechSynthesisUtterance(text);
             speech.lang = "en-US";
             speech.rate = 1.0;
@@ -76,18 +84,18 @@
             speech.pitch = 1;
             speechSynthesis.speak(speech);
         }
-
+    
         // Initialize Speech Recognition
         let recognition;
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
             recognition.lang = 'en-US';
-            recognition.continuous = true;  // Keep listening after first result
-            recognition.interimResults = false;
+            recognition.continuous = true; // Keep listening continuously
+            recognition.interimResults = false; // Get final results only (for accuracy)
         } else {
-            alert("Speech recognition is not supported in this browser.");
+            speakText("Speech recognition is not supported in this browser.");
         }
-
+    
         // Function to start listening
         function startListening() {
             if (recognition) {
@@ -95,48 +103,44 @@
                 recognition.start();
             }
         }
-
+    
         // When speech is detected and recognized
         recognition.onresult = function(event) {
-            let command = event.results[event.results.length - 1][0].transcript.toLowerCase();
+            let command = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
             console.log("Recognized command:", command);
-
+    
             if (command.includes("start exam")) {
                 startExam();
             } else {
-                speakErrorMessage();
+                console.log("Unrecognized command:", command);
             }
         };
-
-        // Function to speak an error message if command is unrecognized
-        function speakErrorMessage() {
-            const speech = new SpeechSynthesisUtterance("Command not recognized. Please try again.");
-            speech.lang = "en-US";
-            speech.rate = 1.0;
-            speech.volume = 1;
-            speech.pitch = 1;
-            speechSynthesis.speak(speech);
-        }
-
+    
         // Error handling
         recognition.onerror = function(event) {
             console.error("Speech Recognition Error:", event.error);
             if (event.error === "not-allowed") {
-                alert("Please allow microphone access and try again.");
+                speakText("Please allow microphone access and try again.");
             }
         };
-
+    
         recognition.onend = function() {
             console.log("Speech recognition stopped. Restarting...");
             setTimeout(startListening, 500); // Restart listening after a short delay
         };
-
-        // Automatically start speech recognition when page loads
+    
+        // Function to speak an alert every 20 seconds
+        function speakReminder() {
+            speakText("Please say 'Start Exam' to begin.");
+            setTimeout(speakReminder, 20000); // Speak alert every 20 seconds
+        }
+    
+        // Automatically start speech recognition and alerts when page loads
         window.onload = function() {
-            readInstructions();
+            readPageContent(); // Read the displayed text
             setTimeout(startListening, 3000); // Start listening after 3 seconds
+            setTimeout(speakReminder, 20000); // Start voice alert after 20 seconds
         };
-
     </script>
 </body>
-</html>
+</html>    

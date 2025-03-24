@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Online Exam</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>c
+    <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -28,6 +28,15 @@
         .exam-title {
             text-align: center;
             flex-grow: 1;
+        }
+        .timer-display {
+            background-color: #e74c3c;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-right: 15px;
+            font-size: 16px;
+            font-weight: bold;
         }
         .mock-exam-label {
             background-color: #f39c12;
@@ -81,10 +90,30 @@
             padding: 10px;
             background-color: #f8f8f8;
         }
+        .nav-btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0 5px;
+        }
         .save-next-btn {
             background-color: #2ecc71;
             color: white;
-            padding: 10px 15px;
+        }
+        .prev-btn {
+            background-color: #3498db;
+            color: white;
+        }
+        .repeat-btn {
+            background-color: #9b59b6;
+            color: white;
+        }
+        .submit-btn {
+            background-color: #e74c3c;
+            color: white;
+            padding: 8px 15px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
@@ -106,12 +135,18 @@
             font-size: 12px;
             display: none;
         }
+        
+        /* Accessibility focus indicators */
+        button:focus, label:focus {
+            outline: 3px solid #3498db;
+        }
     </style>
 </head>
 <body>
     <header>
         <div class="exam-title">JEE MAINS<span class="mock-exam-label">mains Exam</span></div>
-        <button class="submit-btn">Submit</button>
+        <div class="timer-display" id="exam-timer">03:00:00</div>
+        <button class="submit-btn" id="submit-exam">Submit</button>
     </header>
     
     <div class="navigation">
@@ -145,7 +180,9 @@
     </div>
     
     <div class="bottom-navigation">
-        <button id="next" class="save-next-btn">Next</button>
+        <button id="previous" class="nav-btn prev-btn">Previous</button>
+        <button id="repeat" class="nav-btn repeat-btn">Repeat Question</button>
+        <button id="next" class="nav-btn save-next-btn">Next</button>
     </div>
     
     <div id="debug-log"></div>
@@ -153,7 +190,10 @@
     <script>
         let questions = [];
         let currentQuestionIndex = 0;
-        let debugMode = false; // Set to true to show debug console
+        let debugMode = true; // Set to true to show debug console - helpful for testing voice commands
+        let examDuration = 180 * 60; // 3 hours in seconds
+        let timerInterval;
+        let userResponses = [];
 
         function log(message) {
             if (debugMode) {
@@ -210,6 +250,13 @@
             document.querySelectorAll(".options label").forEach(label => {
                 label.classList.remove("selected");
             });
+            
+            // Check if there's a saved response for this question
+            if (userResponses[currentQuestionIndex]) {
+                const savedOption = userResponses[currentQuestionIndex];
+                document.getElementById(`opt${savedOption}`).checked = true;
+                document.querySelector(`label[for="opt${savedOption}"]`).classList.add("selected");
+            }
 
             setTimeout(readInstructions, 500);
         }
@@ -225,9 +272,70 @@
             document.getElementById(optionId).checked = true;
             document.querySelector(`label[for="${optionId}"]`).classList.add("selected");
             
-            // Speak confirmation
+            // Save the response
             const optionNumber = optionId.replace("opt", "");
+            userResponses[currentQuestionIndex] = optionNumber;
+            
+            // Speak confirmation
             speakText(`Option ${optionNumber} has been marked.`);
+        }
+        
+        function formatTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const remainingSeconds = seconds % 60;
+            
+            return [
+                hours.toString().padStart(2, '0'),
+                minutes.toString().padStart(2, '0'),
+                remainingSeconds.toString().padStart(2, '0')
+            ].join(':');
+        }
+        
+        function updateTimer() {
+            examDuration--;
+            document.getElementById('exam-timer').innerText = formatTime(examDuration);
+            
+            if (examDuration <= 0) {
+                clearInterval(timerInterval);
+                submitExam();
+            }
+        }
+        
+        function submitExam() {
+            speechSynthesis.cancel(); // Stop any ongoing speech
+            speakText("Exam time is up. Your exam is being submitted.");
+            alert("Exam Completed! Your responses have been submitted.");
+            // Here you would normally send the results to a server
+        }
+        
+        function reportRemainingTime() {
+            const hours = Math.floor(examDuration / 3600);
+            const minutes = Math.floor((examDuration % 3600) / 60);
+            const seconds = examDuration % 60;
+            
+            const formattedTime = formatTime(examDuration);
+            speakText(`The time left is ${formattedTime}.`);
+        }
+        
+        function goToNextQuestion() {
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                loadQuestion();
+                speakText("Moving to next question");
+            } else {
+                speakText("This is the last question. No more questions available.");
+            }
+        }
+        
+        function goToPreviousQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                loadQuestion();
+                speakText("Moving to previous question");
+            } else {
+                speakText("This is the first question. No previous questions available.");
+            }
         }
 
         $(document).ready(function () {
@@ -236,32 +344,61 @@
                 document.getElementById('debug-log').style.display = 'block';
             }
             
+            // Start exam timer
+            timerInterval = setInterval(updateTimer, 1000);
+            
             $.getJSON("http://127.0.0.1:5000/get_questions")
                 .done(function (data) {
                     questions = data;
+                    // Initialize userResponses array with nulls
+                    userResponses = new Array(questions.length).fill(null);
                     loadQuestion();
                 })
                 .fail(function(jqXHR, textStatus, errorThrown) {
                     log("Error fetching questions: " + textStatus + " - " + errorThrown);
-                    // Create a minimal question for testing if database fetch fails
-                    questions = [{
-                        question: "Loading questions failed. This is a placeholder.",
-                        option1: "Option 1",
-                        option2: "Option 2",
-                        option3: "Option 3",
-                        option4: "Option 4"
-                    }];
+                    // Create some placeholder questions for testing if database fetch fails
+                    questions = [
+                        {
+                            question: "If the roots of the equation x² - 6x + k = 0 are real and equal, what is the value of k?",
+                            option1: "8",
+                            option2: "9",
+                            option3: "10",
+                            option4: "12"
+                        },
+                        {
+                            question: "In a triangle ABC, if angle A equals 60 degrees and angle B equals 45 degrees, what is angle C?",
+                            option1: "75 degrees",
+                            option2: "80 degrees",
+                            option3: "65 degrees",
+                            option4: "70 degrees"
+                        },
+                        {
+                            question: "What is the derivative of f(x) = x³ - 4x² + 2x - 7?",
+                            option1: "3x² - 8x + 2",
+                            option2: "3x² - 4x + 2",
+                            option3: "3x² - 8x",
+                            option4: "x² - 8x + 2"
+                        }
+                    ];
+                    // Initialize userResponses array with nulls
+                    userResponses = new Array(questions.length).fill(null);
                     loadQuestion();
                 });
 
             $("#next").click(function () {
-                if (currentQuestionIndex < questions.length - 1) {
-                    currentQuestionIndex++;
-                    loadQuestion();
-                } else {
-                    alert("Exam Completed!");
-                    speakText("Exam Completed!");
-                }
+                goToNextQuestion();
+            });
+            
+            $("#previous").click(function () {
+                goToPreviousQuestion();
+            });
+            
+            $("#repeat").click(function () {
+                readInstructions();
+            });
+            
+            $("#submit-exam").click(function () {
+                submitExam();
             });
             
             // Add click handlers for options
@@ -280,64 +417,80 @@
         let recognitionRunning = false;
 
         function processSpeechCommand(transcript) {
+            transcript = transcript.toLowerCase().trim();
             log("Recognized: " + transcript);
             
             // Define clear patterns for each option
-            const option1Patterns = ["mark option 1", "select option 1", "option 1", "option one", "first option", "choice 1", "answer 1"];
-            const option2Patterns = ["mark option 2", "select option 2", "option 2", "option two", "second option", "choice 2", "answer 2"];
-            const option3Patterns = ["mark option 3", "select option 3", "option 3", "option three", "third option", "choice 3", "answer 3"];
-            const option4Patterns = ["mark option 4", "select option 4", "option 4", "option four", "fourth option", "choice 4", "answer 4", "option for"];
+            const option1Patterns = ["option 1", "option one", "first option", "choice 1", "answer 1"];
+            const option2Patterns = ["option 2", "option two", "second option", "choice 2", "answer 2"];
+            const option3Patterns = ["option 3", "option three", "third option", "choice 3", "answer 3"];
+            const option4Patterns = ["option 4", "option four", "fourth option", "choice 4", "answer 4"];
             
-            // Check if transcript exactly matches any pattern
-            // The exact matching approach helps prevent confusion between options
+            // Create simple keywords for basic commands
+            const nextPatterns = ["next", "next question"];
+            const prevPatterns = ["previous", "previous question", "go back", "prev"];
+            const repeatPatterns = ["repeat", "repeat question", "read question"];
+            const submitPatterns = ["submit", "submit exam", "finish", "finish exam"];
+            const timePatterns = ["time", "time left", "remaining time", "remaining tym"];
             
-            // Check option 4 first (since it was problematic)
-            for (let pattern of option4Patterns) {
-                if (transcript.includes(pattern)) {
-                    log("Selecting option 4");
-                    selectOption("opt4");
-                    return;
-                }
+            // Simple function to check if transcript contains any of the patterns
+            function containsAny(patterns) {
+                return patterns.some(pattern => transcript.includes(pattern));
             }
             
-            // Then check other options
-            for (let pattern of option3Patterns) {
-                if (transcript.includes(pattern)) {
-                    log("Selecting option 3");
-                    selectOption("opt3");
-                    return;
-                }
+            // Check for option selection first
+            if (containsAny(option1Patterns)) {
+                log("Selecting option 1");
+                selectOption("opt1");
+                return;
+            } 
+            else if (containsAny(option2Patterns)) {
+                log("Selecting option 2");
+                selectOption("opt2");
+                return;
+            }
+            else if (containsAny(option3Patterns)) {
+                log("Selecting option 3");
+                selectOption("opt3");
+                return;
+            }
+            else if (containsAny(option4Patterns)) {
+                log("Selecting option 4");
+                selectOption("opt4");
+                return;
             }
             
-            for (let pattern of option2Patterns) {
-                if (transcript.includes(pattern)) {
-                    log("Selecting option 2");
-                    selectOption("opt2");
-                    return;
-                }
-            }
-            
-            for (let pattern of option1Patterns) {
-                if (transcript.includes(pattern)) {
-                    log("Selecting option 1");
-                    selectOption("opt1");
-                    return;
-                }
-            }
-            
-            // Check for other commands
-            if (transcript.includes("next") || transcript.includes("next question")) {
+            // Then check for navigation commands
+            if (containsAny(nextPatterns)) {
                 log("Going to next question");
-                document.getElementById("next").click();
-            } else if (transcript.includes("read question") || transcript.includes("repeat question")) {
-                log("Reading question");
+                goToNextQuestion();
+                return;
+            } 
+            else if (containsAny(prevPatterns)) {
+                log("Going to previous question");
+                goToPreviousQuestion();
+                return;
+            } 
+            else if (containsAny(repeatPatterns)) {
+                log("Repeating question");
                 readInstructions();
+                return;
+            }
+            else if (containsAny(submitPatterns)) {
+                log("Submitting exam");
+                submitExam();
+                return;
+            }
+            else if (containsAny(timePatterns)) {
+                log("Reporting remaining time");
+                reportRemainingTime();
+                return;
             }
         }
 
         recognition.onresult = function (event) {
             const last = event.results.length - 1;
-            let transcript = event.results[last][0].transcript.trim().toLowerCase();
+            let transcript = event.results[last][0].transcript;
             processSpeechCommand(transcript);
         };
 
@@ -345,7 +498,17 @@
             // Prevent multiple recognition instances
             if (recognitionRunning) {
                 log("Recognition restarted");
-                recognition.start();
+                setTimeout(() => {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        log("Error restarting recognition: " + e.message);
+                        // Try again after a short delay
+                        setTimeout(() => {
+                            if (recognitionRunning) recognition.start();
+                        }, 1000);
+                    }
+                }, 250);
             }
         };
 
@@ -354,14 +517,23 @@
             // If there's an error, wait a bit before restarting
             setTimeout(() => {
                 if (recognitionRunning) {
-                    recognition.start();
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        log("Error restarting after error: " + e.message);
+                    }
                 }
             }, 1000);
         };
 
         // Start speech recognition
         recognitionRunning = true;
-        recognition.start();
+        try {
+            recognition.start();
+            log("Speech recognition started");
+        } catch (e) {
+            log("Error starting speech recognition: " + e.message);
+        }
         
         // Add a keyboard shortcut (press D key) to toggle debug mode
         document.addEventListener('keydown', function(e) {
@@ -371,6 +543,19 @@
                 if (debugMode) {
                     log("Debug mode activated");
                 }
+            }
+        });
+
+        // Add keyboard navigation for testing
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight') {
+                goToNextQuestion();
+            } else if (e.key === 'ArrowLeft') {
+                goToPreviousQuestion();
+            } else if (e.key === 'r') {
+                readInstructions();
+            } else if (e.key === 't') {
+                reportRemainingTime();
             }
         });
     </script>

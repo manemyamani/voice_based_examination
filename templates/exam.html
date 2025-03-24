@@ -148,6 +148,13 @@
         <div class="timer-display" id="exam-timer">03:00:00</div>
         <button class="submit-btn" id="submit-exam">Submit</button>
     </header>
+
+    <form id="exam-form" action="/submit_exam" method="POST">
+        <!-- Hidden fields for assessment_id and user_id -->
+        <input type="hidden" id="assessmentId" name="assessment_id">
+        <input type="hidden" id="userId" name="user_id">
+    </form>
+    
     
     <div class="navigation">
         <div class="nav-item topics">Topics</div>
@@ -303,11 +310,45 @@
         }
         
         function submitExam() {
-            speechSynthesis.cancel(); // Stop any ongoing speech
-            speakText("Exam time is up. Your exam is being submitted.");
+    speechSynthesis.cancel(); // Stop any ongoing speech
+    speakText("Exam time is up. Your exam is being submitted.");
+    
+    let assessmentId = document.getElementById("assessmentId").value;
+    let userId = document.getElementById("userId").value;
+
+    if (!assessmentId || !userId) {
+        alert("Error: Assessment ID or User ID is missing. Please restart the exam.");
+        return;
+    }
+
+    let responses = { assessment_id: assessmentId, user_id: userId };
+
+    // Collect responses dynamically
+    questions.forEach((question, index) => {
+        let selectedOption = document.querySelector(`input[name="option"]:checked`);
+        responses[`response${index + 1}`] = selectedOption ? selectedOption.value : null;
+    });
+
+    fetch("/submit_exam", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(responses)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
             alert("Exam Completed! Your responses have been submitted.");
-            // Here you would normally send the results to a server
+            window.location.href = "/"; // Redirect after submission
+        } else {
+            console.error("Error submitting exam:", result.error);
         }
+    })
+    .catch(error => console.error("Submission error:", error));
+}
+
+
         
         function reportRemainingTime() {
             const hours = Math.floor(examDuration / 3600);
@@ -558,6 +599,20 @@
                 reportRemainingTime();
             }
         });
+
+        document.addEventListener("DOMContentLoaded", function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const assessmentID = urlParams.get("assessment_id") || sessionStorage.getItem("assessment_id");
+    const userID = urlParams.get("user_id") || sessionStorage.getItem("user_id");
+
+    if (assessmentID && userID) {
+      document.getElementById("assessmentId").value = assessmentID;
+      document.getElementById("userId").value = userID;
+    } else {
+      alert("Session expired. Please restart the process.");
+      window.location.href = "/";
+    }
+  });
     </script>
 </body>
 </html>

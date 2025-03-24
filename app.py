@@ -6,6 +6,7 @@ import numpy as np
 import os
 import time
 import hashlib
+import sqlite3
 
 app = Flask(__name__)
 #---------------------------
@@ -38,6 +39,52 @@ def create_table():
     conn.close()
 
 create_table()
+
+def create_responses_table():
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS responses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            assessment_id INTEGER NOT NULL,
+            user_id TEXT NOT NULL,
+            response1 TEXT,
+            response2 TEXT,
+            response3 TEXT,
+            response4 TEXT,
+            response5 TEXT,
+            response6 TEXT,
+            response7 TEXT,
+            response8 TEXT,
+            response9 TEXT,
+            response10 TEXT,
+            response11 TEXT,
+            response12 TEXT,
+            response13 TEXT,
+            response14 TEXT,
+            response15 TEXT,
+            response16 TEXT,
+            response17 TEXT,
+            response18 TEXT,
+            response19 TEXT,
+            response20 TEXT,
+            response21 TEXT,
+            response22 TEXT,
+            response23 TEXT,
+            response24 TEXT,
+            response25 TEXT,
+            response26 TEXT,
+            response27 TEXT,
+            response28 TEXT,
+            response29 TEXT,
+            response30 TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+create_responses_table()
+
 
 # Ensure users table exists
 def create_users_table():
@@ -173,27 +220,49 @@ def get_questions():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+    
+@app.route("/submit_exam", methods=["POST"])
+def submit_exam():
+    try:
+        data = request.json
+        assessment_id = data.get("assessment_id")
+        user_id = data.get("user_id")
+
+        if not assessment_id or not user_id:
+            return jsonify({"error": "Missing assessment_id or user_id"}), 400
+
+        # Get the number of responses dynamically
+        responses = {key: value for key, value in data.items() if key.startswith("response")}
+
+        # Construct the SQL query dynamically
+        columns = ", ".join(responses.keys())
+        placeholders = ", ".join(["?"] * len(responses))
+
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+
+        cursor.execute(f'''
+            CREATE TABLE IF NOT EXISTS responses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                assessment_id INTEGER NOT NULL,
+                user_id TEXT NOT NULL,
+                {columns}
+            )
+        ''')
+
+        cursor.execute(f'''
+            INSERT INTO responses (assessment_id, user_id, {columns})
+            VALUES (?, ?, {placeholders})
+        ''', (assessment_id, user_id, *responses.values()))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-
-import sqlite3
-
-def create_response_table():
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS responses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            question_id INTEGER NOT NULL,
-            selected_option TEXT NOT NULL,
-            FOREIGN KEY (question_id) REFERENCES questions(id)
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-# Call the function to create the table
-create_response_table()
 
 @app.route("/submit_answer", methods=["POST"])
 def submit_answer():

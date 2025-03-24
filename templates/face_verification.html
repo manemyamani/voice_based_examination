@@ -38,29 +38,30 @@
     }
 
     function verifyFaceAutomatically() {
-      const assessmentID = sessionStorage.getItem("assessment_id");
-      if (!assessmentID) {
-        alert("Session expired. Please restart the process.");
-        window.location.href = "/";
-        return;
-      }
-
-      fetch('/verify-face', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assessment_id: assessmentID })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          window.location.href = data.redirect_url; // Redirect to instructions page
-        } else {
-          alert(data.error || "Face verification failed.");
-          window.location.href = "/";
-        }
-      })
-      .catch(error => console.error("Error:", error));
+    const assessmentID = sessionStorage.getItem("assessment_id");
+    if (!assessmentID) {
+      alert("Session expired. Please restart the process.");
+      window.location.href = "/";
+      return;
     }
+
+    fetch('/verify-face', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assessment_id: assessmentID })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        sessionStorage.setItem("user_id", data.user_id); // ✅ Store user_id (Face Image Name)
+        window.location.href = data.redirect_url + `?assessment_id=${assessmentID}&user_id=${data.user_id}`; 
+      } else {
+        alert(data.error || "Face verification failed.");
+        window.location.href = "/";
+      }
+    })
+    .catch(error => console.error("Error:", error));
+  }
 
     window.onload = () => startTimer();
   </script>

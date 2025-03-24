@@ -141,6 +141,21 @@
             setTimeout(startListening, 3000); // Start listening after 3 seconds
             setTimeout(speakReminder, 20000); // Start voice alert after 20 seconds
         };
+        
+        document.addEventListener("DOMContentLoaded", function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const assessmentID = urlParams.get("assessment_id") || sessionStorage.getItem("assessment_id");
+    const userID = urlParams.get("user_id") || sessionStorage.getItem("user_id");
+
+    if (assessmentID && userID) {
+      sessionStorage.setItem("assessment_id", assessmentID);
+      sessionStorage.setItem("user_id", userID);
+      document.getElementById("start-exam-btn").href = `/exam?assessment_id=${assessmentID}&user_id=${userID}`;
+    } else {
+      alert("Session expired. Please restart the process.");
+      window.location.href = "/";
+    }
+  });
     </script>
 </body>
 </html>    

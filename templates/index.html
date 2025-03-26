@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aura Assist - Voice-Based Examination</title>
+  <title>SmartAura - Voice-Based Examination</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
@@ -16,7 +16,7 @@
   
   <main>
     <div class="hero-section">
-      <h1>Welcome to Aura Assist</h1>
+      <h1>Welcome to SmartAura</h1>
       <p>Your voice-powered gateway to accessible education.</p>
       <a href="javascript:void(0)" class="cta-btn" onclick="openModal()">Take Assessment</a>
       
@@ -56,10 +56,23 @@
         alert("Please enter an Assessment ID.");
         return;
       }
-      sessionStorage.setItem("assessment_id", assessmentID);
-      window.location.href = "/face-verification"; // Redirect to the new verification page
+      fetch('/validate-assessment-id', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assessment_id: assessmentID })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.valid) {
+        sessionStorage.setItem("assessment_id", assessmentID);
+        window.location.href = "/face-verification"; // Redirect to verification page
+      } else {
+        alert("Invalid Assessment ID. Please try again.");
+      }
+    })
+    .catch(error => console.error("Error:", error));
+
     }
   </script>
-  
-</body>
+</body>  
 </html>

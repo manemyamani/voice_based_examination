@@ -380,6 +380,7 @@
         }
 
         $(document).ready(function () {
+            const assessmentId = sessionStorage.getItem("assessment_id");
             // Make debug panel visible if debug mode is on
             if (debugMode) {
                 document.getElementById('debug-log').style.display = 'block';
@@ -387,16 +388,32 @@
             
             // Start exam timer
             timerInterval = setInterval(updateTimer, 1000);
+            if (!assessmentId) {
+        alert("No assessment ID found. Please start the assessment process again.");
+        window.location.href = "/"; // Redirect to home or login page
+        return;
+    }
             
-            $.getJSON("http://127.0.0.1:5000/get_questions")
+    $.ajax({
+        url: "http://127.0.0.1:5000/get_questions",
+        method: "GET",
+        data: { assessment_id: assessmentId },
+        dataType: "json"
+    })
                 .done(function (data) {
                     questions = data;
+                    if (questions.length === 0) {
+            alert("No questions found for this assessment.");
+            window.location.href = "/";
+            return;
+        }
                     // Initialize userResponses array with nulls
                     userResponses = new Array(questions.length).fill(null);
                     loadQuestion();
                 })
                 .fail(function(jqXHR, textStatus, errorThrown) {
                     log("Error fetching questions: " + textStatus + " - " + errorThrown);
+                    alert("Failed to load questions. Please try again.");
                     // Create some placeholder questions for testing if database fetch fails
                     questions = [
                         {

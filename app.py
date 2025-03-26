@@ -17,95 +17,34 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 
 if not os.path.exists(TEMPLATES_DIR):
     os.makedirs(TEMPLATES_DIR)
-
-
-def create_table(): 
+def is_valid_assessment_id(assessment_id):
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS questions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            assessment_id INTEGER NOT NULL,  -- Added assessment_id column
-            question TEXT NOT NULL,
-            option1 TEXT NOT NULL,
-            option2 TEXT NOT NULL,
-            option3 TEXT NOT NULL,
-            option4 TEXT NOT NULL,
-            answer TEXT NOT NULL,
-            subject TEXT NOT NULL
-        )
-    ''')
-    conn.commit()
+    
+    # Query to check if the assessment ID exists
+    cursor.execute("SELECT 1 FROM questions WHERE assessment_id = ?", (assessment_id,))
+    result = cursor.fetchone()
+    
     conn.close()
+    return result is not None  # Returns True if found, False otherwise
 
-create_table()
+# API route to validate the assessment ID
+@app.route('/validate-assessment-id', methods=['POST'])
+def validate_assessment_id():
+    data = request.get_json()
+    assessment_id = data.get('assessment_id')
 
-def create_responses_table():
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS responses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            assessment_id INTEGER NOT NULL,
-            user_id TEXT NOT NULL,
-            response1 TEXT,
-            response2 TEXT,
-            response3 TEXT,
-            response4 TEXT,
-            response5 TEXT,
-            response6 TEXT,
-            response7 TEXT,
-            response8 TEXT,
-            response9 TEXT,
-            response10 TEXT,
-            response11 TEXT,
-            response12 TEXT,
-            response13 TEXT,
-            response14 TEXT,
-            response15 TEXT,
-            response16 TEXT,
-            response17 TEXT,
-            response18 TEXT,
-            response19 TEXT,
-            response20 TEXT,
-            response21 TEXT,
-            response22 TEXT,
-            response23 TEXT,
-            response24 TEXT,
-            response25 TEXT,
-            response26 TEXT,
-            response27 TEXT,
-            response28 TEXT,
-            response29 TEXT,
-            response30 TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    if not assessment_id:
+        return jsonify({"valid": False})  # If no ID is provided, return invalid
 
-create_responses_table()
+    # Check if the ID exists in the database
+    valid = is_valid_assessment_id(assessment_id)
+    
+    return jsonify({"valid": valid})
 
 
-# Ensure users table exists
-def create_users_table():
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            mobile TEXT NOT NULL,
-            date_of_birth TEXT NOT NULL,
-            gender TEXT NOT NULL,
-            password TEXT NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
 
-create_users_table()
+
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -195,31 +134,62 @@ def home():
 @app.route("/get_questions", methods=["GET"])
 def get_questions():
     try:
+        # Get assessment_id from query parameters
+        assessment_id = request.args.get('assessment_id')
+        
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM questions")
+        
+        # If assessment_id is provided, filter questions
+        if assessment_id:
+            cursor.execute("""
+                SELECT 
+                    id, 
+                    assessment_id, 
+                    question, 
+                    option1, 
+                    option2, 
+                    option3, 
+                    option4, 
+                    answer, 
+                    subject 
+                FROM questions 
+                WHERE assessment_id = ?
+            """, (assessment_id,))
+        else:
+            # If no assessment_id, return an error
+            conn.close()
+            return jsonify({"error": "Assessment ID is required"}), 400
+        
         questions = cursor.fetchall()
         conn.close()
+
+        # Check if any questions were found
+        if not questions:
+            return jsonify({"error": "No questions found for this assessment ID"}), 404
 
         # Convert data into a list of dictionaries
         question_list = [
             {
                 "id": row[0],
-                "question": row[1],
-                "option1": row[2],
-                "option2": row[3],
-                "option3": row[4],
-                "option4": row[5],
-                "answer": row[6],
-                "subject": row[7],
+                "assessment_id": row[1],
+                "question": row[2],
+                "option1": row[3],
+                "option2": row[4],
+                "option3": row[5],
+                "option4": row[6],
+                "answer": row[7],
+                "subject": row[8]
             }
             for row in questions
         ]
 
         return jsonify(question_list)
 
+    except sqlite3.Error as e:
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": f"Unexpected error: {str(e)}"}), 400
     
 @app.route("/submit_exam", methods=["POST"])
 def submit_exam():
@@ -410,7 +380,7 @@ def start_camera():
         cap = cv2.VideoCapture(0)
         time.sleep(2)  # Delay for camera to warm up
         if not cap.isOpened():
-            print("⚠️ Could not access webcam.")
+            print("⚠ Could not access webcam.")
             return False
     return True
 
@@ -445,26 +415,83 @@ def verify_face():
 
     # Convert frame to RGB for face recognition
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
+    face_locations = face_recognition.face_locations(frame_rgb)
     # Find faces in the captured image
-    face_encodings = face_recognition.face_encodings(frame_rgb)
-    
-    if not face_encodings:
-        stop_camera()  # Stop camera if no face detected
-        return jsonify({'error': 'No face detected!'}), 400
+    face_encodings = face_recognition.face_encodings(frame_rgb, face_locations)
+    if len(face_locations) > 1:
+        stop_camera()
+        return jsonify({
+            'error': 'Multiple faces detected! Only one person is allowed.',
+            'multiple_faces': True
+        }), 400
+    if len(face_locations) > 1:
+        stop_camera()
+        return jsonify({
+            'error': 'Multiple faces detected! Only one person is allowed.',
+            'multiple_faces': True
+        }), 400
 
     # Compare with known faces
-    match = face_recognition.compare_faces(KNOWN_ENCODINGS, face_encodings[0])
-    if True in match:
-        matched_index = match.index(True)
-        matched_name = KNOWN_NAMES[matched_index]
-
-        session['assessment_id'] = assessment_id  # Store session for authentication
-        stop_camera()  # Stop camera after successful verification
-        return jsonify({'success': True, 'message': 'Face verified!', 'redirect_url': url_for('instructions_page')})
+    known_face_encodings = []
+    known_face_names = []
     
-    stop_camera()  # Stop camera if face verification fails
-    return jsonify({'error': 'Face verification failed!'}), 401
+    for filename in os.listdir(KNOWN_FACES_DIR):
+        if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+            img_path = os.path.join(KNOWN_FACES_DIR, filename)
+            try:
+                known_image = face_recognition.load_image_file(img_path)
+                encoding = face_recognition.face_encodings(known_image)
+                
+                if encoding:
+                    known_face_encodings.append(encoding[0])
+                    # Use filename (without extension) as the name
+                    known_face_names.append(os.path.splitext(filename)[0])
+            except Exception as e:
+                print(f"Error processing {filename}: {e}")
+
+    # Verification parameters
+    MATCH_THRESHOLD = 0.5  # Adjust for stricter matching
+    current_face_encoding = face_encodings[0]
+
+    # Compare with known faces
+    matches = face_recognition.compare_faces(known_face_encodings, current_face_encoding)
+    face_distances = face_recognition.face_distance(known_face_encodings, current_face_encoding)
+
+    # Find best match
+    best_match_index = None
+    if True in matches:
+        best_match_index = matches.index(True)
+        
+        # Additional confidence check
+        if face_distances[best_match_index] > MATCH_THRESHOLD:
+            best_match_index = None
+
+    # Stop camera
+    stop_camera()
+
+    # Verification result
+    if best_match_index is not None:
+        matched_name = known_face_names[best_match_index]
+        
+        # Log verification
+        print(f"✅ Verified User: {matched_name}")
+        
+        # Set session variables for security
+        session['candidate_id'] = matched_name
+        session['assessment_id'] = assessment_id
+        
+        return jsonify({
+            'success': True,
+            'message': f'Face verified for {matched_name}',
+            'username': matched_name,
+            'redirect_url': url_for('instructions_page')
+        }), 200
+    else:
+        return jsonify({
+            'error': 'Unauthorized user! Only registered candidates can take the exam.', 
+            'unauthorized': True
+        }), 401
+        
 
 # Webcam streaming function
 def generate_frames():

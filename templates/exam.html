@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,11 +13,13 @@
             padding: 0;
             background-color: #f0f0f0;
         }
+
         .container {
             width: 100%;
             margin: 0;
             background-color: white;
         }
+
         header {
             background-color: #3498db;
             color: white;
@@ -25,10 +28,12 @@
             justify-content: space-between;
             align-items: center;
         }
+
         .exam-title {
             text-align: center;
             flex-grow: 1;
         }
+
         .timer-display {
             background-color: #e74c3c;
             color: white;
@@ -38,6 +43,7 @@
             font-size: 16px;
             font-weight: bold;
         }
+
         .mock-exam-label {
             background-color: #f39c12;
             color: white;
@@ -46,32 +52,41 @@
             font-size: 14px;
             margin-left: 5px;
         }
+
         .navigation {
             display: flex;
             border-bottom: 1px solid #ddd;
         }
+
         .nav-item {
             padding: 10px 20px;
             cursor: pointer;
         }
+
         .topics {
             background-color: #f39c12;
             color: white;
         }
+
         .main-content {
             display: flex;
         }
-        .question-panel, .options-panel {
+
+        .question-panel,
+        .options-panel {
             flex: 2;
             padding: 20px;
         }
-        .question-box, .options-box {
+
+        .question-box,
+        .options-box {
             background-color: white;
             border: 1px solid #ddd;
             border-radius: 4px;
             padding: 15px;
             margin-bottom: 15px;
         }
+
         .options label {
             display: block;
             padding: 8px;
@@ -81,15 +96,18 @@
             cursor: pointer;
             text-align: left;
         }
+
         .options input {
             margin-right: 10px;
         }
+
         .bottom-navigation {
             display: flex;
             justify-content: space-between;
             padding: 10px;
             background-color: #f8f8f8;
         }
+
         .nav-btn {
             padding: 10px 15px;
             border: none;
@@ -98,18 +116,22 @@
             font-size: 16px;
             margin: 0 5px;
         }
+
         .save-next-btn {
             background-color: #2ecc71;
             color: white;
         }
+
         .prev-btn {
             background-color: #3498db;
             color: white;
         }
+
         .repeat-btn {
             background-color: #9b59b6;
             color: white;
         }
+
         .submit-btn {
             background-color: #e74c3c;
             color: white;
@@ -119,14 +141,16 @@
             cursor: pointer;
             font-size: 16px;
         }
+
         .selected {
             background-color: #FFD700 !important;
         }
+
         #debug-log {
             position: fixed;
             bottom: 0;
             right: 0;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0, 0, 0, 0.7);
             color: white;
             padding: 10px;
             max-width: 300px;
@@ -135,34 +159,35 @@
             font-size: 12px;
             display: none;
         }
-        
+
         /* Accessibility focus indicators */
-        button:focus, label:focus {
+        button:focus,
+        label:focus {
             outline: 3px solid #3498db;
         }
     </style>
 </head>
+
 <body>
+    <!-- ------------------------------------------------------------------------------------------------------- -->
     <header>
         <div class="exam-title">JEE MAINS<span class="mock-exam-label">mains Exam</span></div>
+        <h2 id="candidate-name"></h2>
         <div class="timer-display" id="exam-timer">03:00:00</div>
         <button class="submit-btn" id="submit-exam">Submit</button>
     </header>
-
     <form id="exam-form" action="/submit_exam" method="POST">
-        <!-- Hidden fields for assessment_id and user_id -->
         <input type="hidden" id="assessmentId" name="assessment_id">
         <input type="hidden" id="userId" name="user_id">
     </form>
-    
-    
+
     <div class="navigation">
         <div class="nav-item topics">Topics</div>
         <div class="nav-item active">MATHEMATICS</div>
         <div class="nav-item">PHYSICS</div>
         <div class="nav-item">CHEMISTRY</div>
     </div>
-    
+
     <div class="container">
         <div class="main-content">
             <div class="question-panel">
@@ -171,29 +196,34 @@
                     <div id="question-text">Loading...</div>
                 </div>
             </div>
-            
+
             <div class="options-panel">
                 <div class="options-box">
                     <p>Options</p>
                 </div>
                 <div class="options">
-                    <label for="opt1"><input type="radio" name="option" id="opt1" value="1"> <span id="opt1-text"></span></label>
-                    <label for="opt2"><input type="radio" name="option" id="opt2" value="2"> <span id="opt2-text"></span></label>
-                    <label for="opt3"><input type="radio" name="option" id="opt3" value="3"> <span id="opt3-text"></span></label>
-                    <label for="opt4"><input type="radio" name="option" id="opt4" value="4"> <span id="opt4-text"></span></label>
+                    <label for="opt1"><input type="radio" name="option" id="opt1" value="1"> <span
+                            id="opt1-text"></span></label>
+                    <label for="opt2"><input type="radio" name="option" id="opt2" value="2"> <span
+                            id="opt2-text"></span></label>
+                    <label for="opt3"><input type="radio" name="option" id="opt3" value="3"> <span
+                            id="opt3-text"></span></label>
+                    <label for="opt4"><input type="radio" name="option" id="opt4" value="4"> <span
+                            id="opt4-text"></span></label>
                 </div>
             </div>
         </div>
-    </div>
-    
+    </div> 
+    <!-- ------------------------------------------------------------------------------------------------------- -->
+
     <div class="bottom-navigation">
         <button id="previous" class="nav-btn prev-btn">Previous</button>
         <button id="repeat" class="nav-btn repeat-btn">Repeat Question</button>
         <button id="next" class="nav-btn save-next-btn">Next</button>
     </div>
-    
+
     <div id="debug-log"></div>
-    
+
     <script>
         let questions = [];
         let currentQuestionIndex = 0;
@@ -215,7 +245,7 @@
         function speakText(text) {
             // Cancel any ongoing speech first
             speechSynthesis.cancel();
-            
+
             const speech = new SpeechSynthesisUtterance(text);
             speech.lang = "en-US";
             speechSynthesis.speak(speech);
@@ -241,7 +271,7 @@
 
         function loadQuestion() {
             if (questions.length === 0) return;
-            
+
             let questionData = questions[currentQuestionIndex];
             document.getElementById("question-number").innerText = currentQuestionIndex + 1;
             document.getElementById("question-text").innerText = questionData.question;
@@ -257,7 +287,7 @@
             document.querySelectorAll(".options label").forEach(label => {
                 label.classList.remove("selected");
             });
-            
+
             // Check if there's a saved response for this question
             if (userResponses[currentQuestionIndex]) {
                 const savedOption = userResponses[currentQuestionIndex];
@@ -267,98 +297,97 @@
 
             setTimeout(readInstructions, 500);
         }
-        
+
         function selectOption(optionId) {
             // First clear any existing selections
             document.querySelectorAll(".options label").forEach(label => label.classList.remove("selected"));
             document.querySelectorAll('input[name="option"]').forEach(input => {
                 input.checked = false;
             });
-            
+
             // Then select the new option
             document.getElementById(optionId).checked = true;
             document.querySelector(`label[for="${optionId}"]`).classList.add("selected");
-            
+
             // Save the response
             const optionNumber = optionId.replace("opt", "");
             userResponses[currentQuestionIndex] = optionNumber;
-            
+
             // Speak confirmation
             speakText(`Option ${optionNumber} has been marked.`);
         }
-        
+
         function formatTime(seconds) {
             const hours = Math.floor(seconds / 3600);
             const minutes = Math.floor((seconds % 3600) / 60);
             const remainingSeconds = seconds % 60;
-            
+
             return [
                 hours.toString().padStart(2, '0'),
                 minutes.toString().padStart(2, '0'),
                 remainingSeconds.toString().padStart(2, '0')
             ].join(':');
         }
-        
+
         function updateTimer() {
             examDuration--;
             document.getElementById('exam-timer').innerText = formatTime(examDuration);
-            
+
             if (examDuration <= 0) {
                 clearInterval(timerInterval);
                 submitExam();
             }
         }
-        
+
         function submitExam() {
-    speechSynthesis.cancel(); // Stop any ongoing speech
-    speakText("Exam time is up. Your exam is being submitted.");
-    
-    let assessmentId = document.getElementById("assessmentId").value;
-    let userId = document.getElementById("userId").value;
+            speechSynthesis.cancel(); // Stop any ongoing speech
+            speakText("Exam time is up. Your exam is being submitted.");
 
-    if (!assessmentId || !userId) {
-        alert("Error: Assessment ID or User ID is missing. Please restart the exam.");
-        return;
-    }
+            let assessmentId = document.getElementById("assessmentId").value;
+            let userId = document.getElementById("userId").value;
 
-    let responses = { assessment_id: assessmentId, user_id: userId };
+            if (!assessmentId || !userId) {
+                alert("Error: Assessment ID or User ID is missing. Please restart the exam.");
+                return;
+            }
 
-    // Collect responses dynamically
-    questions.forEach((question, index) => {
-        let selectedOption = document.querySelector(`input[name="option"]:checked`);
-        responses[`response${index + 1}`] = selectedOption ? selectedOption.value : null;
-    });
+            let responses = { assessment_id: assessmentId, user_id: userId };
 
-    fetch("/submit_exam", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(responses)
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            alert("Exam Completed! Your responses have been submitted.");
-            window.location.href = "/"; // Redirect after submission
-        } else {
-            console.error("Error submitting exam:", result.error);
-        }
-    })
-    .catch(error => console.error("Submission error:", error));
-}
+            // Collect responses dynamically
+            questions.forEach((question, index) => {
+                let selectedOption = document.querySelector(`input[name="option"]:checked`);
+                responses[`response${index + 1}`] = selectedOption ? selectedOption.value : null;
+            });
+
+            fetch("/submit_exam", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(responses)
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        alert("Exam Completed! Your responses have been submitted.");
+                        window.location.href = "/"; // Redirect after submission
+                    } else {
+                        console.error("Error submitting exam:", result.error);
+                    }
+                })
+                .catch(error => console.error("Submission error:", error));
+        }    
 
 
-        
         function reportRemainingTime() {
             const hours = Math.floor(examDuration / 3600);
             const minutes = Math.floor((examDuration % 3600) / 60);
             const seconds = examDuration % 60;
-            
+
             const formattedTime = formatTime(examDuration);
             speakText(`The time left is ${formattedTime}.`);
         }
-        
+
         function goToNextQuestion() {
             if (currentQuestionIndex < questions.length - 1) {
                 currentQuestionIndex++;
@@ -368,7 +397,7 @@
                 speakText("This is the last question. No more questions available.");
             }
         }
-        
+
         function goToPreviousQuestion() {
             if (currentQuestionIndex > 0) {
                 currentQuestionIndex--;
@@ -385,123 +414,140 @@
             if (debugMode) {
                 document.getElementById('debug-log').style.display = 'block';
             }
-            
+
             // Start exam timer
             timerInterval = setInterval(updateTimer, 1000);
             if (!assessmentId) {
-        alert("No assessment ID found. Please start the assessment process again.");
-        window.location.href = "/"; // Redirect to home or login page
-        return;
-    }
-            
-    $.ajax({
-        url: "http://127.0.0.1:5000/get_questions",
-        method: "GET",
-        data: { assessment_id: assessmentId },
-        dataType: "json"
-    })
+                alert("No assessment ID found. Please start the assessment process again.");
+                window.location.href = "/"; // Redirect to home or login page
+                return;
+            }
+
+
+            $.ajax({
+                url: "http://127.0.0.1:5000/get_questions",
+                method: "GET",
+                data: { assessment_id: assessmentId },
+                dataType: "json"
+            })
                 .done(function (data) {
-                    questions = data;
+                    if (data.error) {
+                        alert(data.error);
+                        window.location.href = "/";
+                        return;
+                    }
+
+                    // Retrieve candidate name
+                    let candidateName = data.candidate_name;
+
+                    // Display candidate name on the page (assuming you have an element with id 'candidate-name')
+                    document.getElementById("candidate-name").textContent = "Candidate: " + candidateName;
+
+                    // Retrieve questions
+                    questions = data.questions;
+
                     if (questions.length === 0) {
-            alert("No questions found for this assessment.");
-            window.location.href = "/";
-            return;
-        }
-                    // Initialize userResponses array with nulls
+                        alert("No questions found for this assessment.");
+                        window.location.href = "/";
+                        return;
+                    }
+
+                    // Initialize userResponses array with null values
                     userResponses = new Array(questions.length).fill(null);
                     loadQuestion();
                 })
-                .fail(function(jqXHR, textStatus, errorThrown) {
-                    log("Error fetching questions: " + textStatus + " - " + errorThrown);
+                .fail(function (jqXHR, textStatus, errorThrown) {
+                    console.log("Error fetching questions: " + textStatus + " - " + errorThrown);
                     alert("Failed to load questions. Please try again.");
-                    // Create some placeholder questions for testing if database fetch fails
-                    questions = [
-                        {
-                            question: "If the roots of the equation x² - 6x + k = 0 are real and equal, what is the value of k?",
-                            option1: "8",
-                            option2: "9",
-                            option3: "10",
-                            option4: "12"
-                        },
-                        {
-                            question: "In a triangle ABC, if angle A equals 60 degrees and angle B equals 45 degrees, what is angle C?",
-                            option1: "75 degrees",
-                            option2: "80 degrees",
-                            option3: "65 degrees",
-                            option4: "70 degrees"
-                        },
-                        {
-                            question: "What is the derivative of f(x) = x³ - 4x² + 2x - 7?",
-                            option1: "3x² - 8x + 2",
-                            option2: "3x² - 4x + 2",
-                            option3: "3x² - 8x",
-                            option4: "x² - 8x + 2"
-                        }
-                    ];
-                    // Initialize userResponses array with nulls
-                    userResponses = new Array(questions.length).fill(null);
-                    loadQuestion();
                 });
 
-            $("#next").click(function () {
-                goToNextQuestion();
-            });
-            
-            $("#previous").click(function () {
-                goToPreviousQuestion();
-            });
-            
-            $("#repeat").click(function () {
-                readInstructions();
-            });
-            
-            $("#submit-exam").click(function () {
-                submitExam();
-            });
-            
-            // Add click handlers for options
-            $('input[name="option"]').change(function() {
-                const optionId = $(this).attr('id');
-                selectOption(optionId);
-            });
+            questions = [
+                {
+                    question: "If the roots of the equation x² - 6x + k = 0 are real and equal, what is the value of k?",
+                    option1: "8",
+                    option2: "9",
+                    option3: "10",
+                    option4: "12"
+                },
+                {
+                    question: "In a triangle ABC, if angle A equals 60 degrees and angle B equals 45 degrees, what is angle C?",
+                    option1: "75 degrees",
+                    option2: "80 degrees",
+                    option3: "65 degrees",
+                    option4: "70 degrees"
+                },
+                {
+                    question: "What is the derivative of f(x) = x³ - 4x² + 2x - 7?",
+                    option1: "3x² - 8x + 2",
+                    option2: "3x² - 4x + 2",
+                    option3: "3x² - 8x",
+                    option4: "x² - 8x + 2"
+                }
+            ];
+            // Initialize userResponses array with nulls
+            userResponses = new Array(questions.length).fill(null);
+            loadQuestion();
         });
+
+        $("#next").click(function () {
+            goToNextQuestion();
+        });
+
+        $("#previous").click(function () {
+            goToPreviousQuestion();
+        });
+
+        $("#repeat").click(function () {
+            readInstructions();
+        });
+
+        $("#submit-exam").click(function () {
+            submitExam();
+        });
+
+        // Add click handlers for options
+        $('input[name="option"]').change(function () {
+            const optionId = $(this).attr('id');
+            selectOption(optionId);
+        });
+        // });
 
         window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.lang = "en-US";
-        
+
         // Fix to prevent multiple listeners
         let recognitionRunning = false;
 
         function processSpeechCommand(transcript) {
             transcript = transcript.toLowerCase().trim();
             log("Recognized: " + transcript);
-            
+
             // Define clear patterns for each option
             const option1Patterns = ["option 1", "option one", "first option", "choice 1", "answer 1"];
             const option2Patterns = ["option 2", "option two", "second option", "choice 2", "answer 2"];
             const option3Patterns = ["option 3", "option three", "third option", "choice 3", "answer 3"];
             const option4Patterns = ["option 4", "option four", "fourth option", "choice 4", "answer 4"];
-            
+
             // Create simple keywords for basic commands
             const nextPatterns = ["next", "next question"];
             const prevPatterns = ["previous", "previous question", "go back", "prev"];
             const repeatPatterns = ["repeat", "repeat question", "read question"];
             const submitPatterns = ["submit", "submit exam", "finish", "finish exam"];
             const timePatterns = ["time", "time left", "remaining time", "remaining tym"];
-            
+
             // Simple function to check if transcript contains any of the patterns
             function containsAny(patterns) {
                 return patterns.some(pattern => transcript.includes(pattern));
             }
-            
+
             // Check for option selection first
             if (containsAny(option1Patterns)) {
                 log("Selecting option 1");
                 selectOption("opt1");
                 return;
-            } 
+            }
             else if (containsAny(option2Patterns)) {
                 log("Selecting option 2");
                 selectOption("opt2");
@@ -517,18 +563,18 @@
                 selectOption("opt4");
                 return;
             }
-            
+
             // Then check for navigation commands
             if (containsAny(nextPatterns)) {
                 log("Going to next question");
                 goToNextQuestion();
                 return;
-            } 
+            }
             else if (containsAny(prevPatterns)) {
                 log("Going to previous question");
                 goToPreviousQuestion();
                 return;
-            } 
+            }
             else if (containsAny(repeatPatterns)) {
                 log("Repeating question");
                 readInstructions();
@@ -552,7 +598,7 @@
             processSpeechCommand(transcript);
         };
 
-        recognition.onend = function() {
+        recognition.onend = function () {
             // Prevent multiple recognition instances
             if (recognitionRunning) {
                 log("Recognition restarted");
@@ -570,7 +616,7 @@
             }
         };
 
-        recognition.onerror = function(event) {
+        recognition.onerror = function (event) {
             log("Recognition error: " + event.error);
             // If there's an error, wait a bit before restarting
             setTimeout(() => {
@@ -592,9 +638,9 @@
         } catch (e) {
             log("Error starting speech recognition: " + e.message);
         }
-        
+
         // Add a keyboard shortcut (press D key) to toggle debug mode
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'd' && e.ctrlKey) {
                 debugMode = !debugMode;
                 document.getElementById('debug-log').style.display = debugMode ? 'block' : 'none';
@@ -605,7 +651,7 @@
         });
 
         // Add keyboard navigation for testing
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'ArrowRight') {
                 goToNextQuestion();
             } else if (e.key === 'ArrowLeft') {
@@ -618,18 +664,19 @@
         });
 
         document.addEventListener("DOMContentLoaded", function () {
-    const urlParams = new URLSearchParams(window.location.search);
-    const assessmentID = urlParams.get("assessment_id") || sessionStorage.getItem("assessment_id");
-    const userID = urlParams.get("user_id") || sessionStorage.getItem("user_id");
+            const urlParams = new URLSearchParams(window.location.search);
+            const assessmentID = urlParams.get("assessment_id") || sessionStorage.getItem("assessment_id");
+            const userID = urlParams.get("user_id") || sessionStorage.getItem("user_id");
 
-    if (assessmentID && userID) {
-      document.getElementById("assessmentId").value = assessmentID;
-      document.getElementById("userId").value = userID;
-    } else {
-      alert("Session expired. Please restart the process.");
-      window.location.href = "/";
-    }
-  });
+            if (assessmentID && userID) {
+                document.getElementById("assessmentId").value = assessmentID;
+                document.getElementById("userId").value = userID;
+            } else {
+                alert("Session expired. Please restart the process.");
+                window.location.href = "/";
+            }
+        });
     </script>
 </body>
+
 </html>

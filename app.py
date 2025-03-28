@@ -14,7 +14,7 @@ DATABASE = "auraassist.db"
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
-
+# candi_name ="kalki"
 if not os.path.exists(TEMPLATES_DIR):
     os.makedirs(TEMPLATES_DIR)
 def is_valid_assessment_id(assessment_id):
@@ -136,7 +136,11 @@ def get_questions():
     try:
         # Get assessment_id from query parameters
         assessment_id = request.args.get('assessment_id')
-        
+        candidate_id = request.args.get("candidate_id")
+        print("----------------------------------------------------")
+        print(f"----------------{candi_name}--------------------")
+        print("----------------------------------------------------")
+
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
         
@@ -164,7 +168,6 @@ def get_questions():
         questions = cursor.fetchall()
         conn.close()
 
-        # Check if any questions were found
         if not questions:
             return jsonify({"error": "No questions found for this assessment ID"}), 404
 
@@ -184,7 +187,9 @@ def get_questions():
             for row in questions
         ]
 
-        return jsonify(question_list)
+        # return jsonify(question_list)
+        return jsonify({"candidate_name": candi_name, "questions": question_list})
+
 
     except sqlite3.Error as e:
         return jsonify({"error": f"Database error: {str(e)}"}), 500
@@ -201,8 +206,11 @@ def submit_exam():
         if not assessment_id or not user_id:
             return jsonify({"error": "Missing assessment_id or user_id"}), 400
 
-        # Get the number of responses dynamically
+        # Get dynamic responses
         responses = {key: value for key, value in data.items() if key.startswith("response")}
+        
+        if not responses:
+            return jsonify({"error": "No responses received"}), 400
 
         # Construct the SQL query dynamically
         columns = ", ".join(responses.keys())
@@ -211,53 +219,40 @@ def submit_exam():
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
 
-        cursor.execute(f'''
+        # Ensure the table exists (but avoid creating it dynamically every time)
+        cursor.execute('''
             CREATE TABLE IF NOT EXISTS responses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 assessment_id INTEGER NOT NULL,
-                user_id TEXT NOT NULL,
-                {columns}
+                user_id TEXT NOT NULL
             )
         ''')
 
-        cursor.execute(f'''
+        # Check if columns already exist; if not, add them dynamically
+        existing_columns = {row[1] for row in cursor.execute("PRAGMA table_info(responses)")}
+        new_columns = set(responses.keys()) - existing_columns
+
+        for col in new_columns:
+            cursor.execute(f"ALTER TABLE responses ADD COLUMN {col} TEXT")
+
+        # Insert data dynamically
+        sql = f'''
             INSERT INTO responses (assessment_id, user_id, {columns})
             VALUES (?, ?, {placeholders})
-        ''', (assessment_id, user_id, *responses.values()))
+        '''
+        cursor.execute(sql, (assessment_id, candi_name, *responses.values()))
 
         conn.commit()
         conn.close()
 
         return jsonify({"success": True}), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 
-@app.route("/submit_answer", methods=["POST"])
-def submit_answer():
-    try:
-        data = request.json
-        question_id = data.get("question_id")
-        selected_option = data.get("selected_option")
-
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO responses (question_id, selected_option)
-            VALUES (?, ?)
-        ''', (question_id, selected_option))
-
-        conn.commit()
-        conn.close()
-
-        return jsonify({"message": "Answer submitted successfully!"})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-#---------------------------
-app.secret_key = 'your_secret_key'  # Required for session management
+app.secret_key = 'your_secret_key'  
 
 KNOWN_FACES_DIR = "known_faces"
 
@@ -394,9 +389,10 @@ def stop_camera():
 def face_verification_page():
     return render_template('face_verification.html')
 
+
 @app.route('/verify-face', methods=['POST'])
 def verify_face():
-    global latest_frame
+    global latest_frame, candi_name
     data = request.get_json()
     assessment_id = data.get('assessment_id')
 
@@ -475,7 +471,9 @@ def verify_face():
         
         # Log verification
         print(f"✅ Verified User: {matched_name}")
-        
+        candi_name = str(matched_name)
+        if candi_name!="kalki":
+            print("u fucked")
         # Set session variables for security
         session['candidate_id'] = matched_name
         session['assessment_id'] = assessment_id

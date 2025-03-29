@@ -7,6 +7,8 @@
     <title>Online Exam</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/exam.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
     <style>
         /* Added CSS for subject navigation */
         .navigation .nav-item {
@@ -50,6 +52,7 @@
 
     <div class="container">
         <div class="main-content">
+            <video id="video" autoplay muted></video>
             <div class="question-panel">
                 <div class="question-box">
                     <p><strong>Question <span id="question-number">1</span></strong></p>
@@ -595,7 +598,7 @@
                         // Try again after a short delay
                         setTimeout(() => {
                             if (recognitionRunning) recognition.start();
-                        }, 1000);
+                        }, 10000);
                     }
                 }, 250);
             }
@@ -662,6 +665,52 @@
             }
         });
     </script>
+      <script>
+        async function setupCamera() {
+          const video = document.getElementById('video');
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          video.srcObject = stream;
+          await new Promise((resolve) => (video.onloadedmetadata = resolve));
+        }
+    
+       async function monitor() {
+      const model = await blazeface.load();
+      const video = document.getElementById('video');
+     
+      setInterval(async () => {
+        const predictions = await model.estimateFaces(video, false);
+    
+        if (predictions.length === 0) {
+          alert("No object detected.");
+        } else if (predictions.length > 1) {
+          alert("Multiple objects detected.");
+        } else {
+          const face = predictions[0];
+          const leftEye = face.landmarks[0];
+          const rightEye = face.landmarks[1];
+          const nose = face.landmarks[2];
+    
+          // Calculate horizontal distance between eyes
+          const eyeDistance = Math.abs(leftEye[0] - rightEye[0]);
+         
+          // Calculate the vertical alignment of nose with eyes
+          const nosePosition = nose[0] - ((leftEye[0] + rightEye[0]) / 2);
+    
+          // Check if user is looking away based on eye-nose alignment
+          const lookingAwayThreshold = 10; // Adjust based on testing
+          if (Math.abs(nosePosition) > lookingAwayThreshold) {
+            alert("User looking away.");
+          }
+        }
+      }, 1000); // Run detection every second
+    }
+        async function init() {
+          await setupCamera();
+          monitor();
+        }
+    
+        init();
+      </script>
 </body>
 
 </html>

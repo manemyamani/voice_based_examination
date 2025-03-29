@@ -7,27 +7,6 @@
     <title>Online Exam</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/exam.css') }}">
-    <style>
-        /* Added CSS for subject navigation */
-        .navigation .nav-item {
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .navigation .nav-item:hover {
-            background-color: #e6e6e6;
-        }
-
-        .navigation .nav-item.active {
-            background-color: #4CAF50;
-            color: white;
-        }
-
-        .navigation .topics {
-            font-weight: bold;
-            background-color: #f0f0f0;
-        }
-    </style>
 </head>
 
 <body>
@@ -43,6 +22,12 @@
         <input type="hidden" id="userId" name="user_id">
     </form>
 
+    <!-- <div class="navigation">
+        <div class="nav-item topics">Topics</div>
+        <div class="nav-item active">MATHEMATICS</div>
+        <div class="nav-item">PHYSICS</div>
+        <div class="nav-item">CHEMISTRY</div>
+    </div> -->
     <div class="navigation">
         <div class="nav-item topics">Topics</div>
         <!-- Subject buttons will be added dynamically by JavaScript -->
@@ -87,12 +72,10 @@
     <script>
         let questions = [];
         let currentQuestionIndex = 0;
-        let debugMode = true; 
-        let examDuration = 180 * 60; 
+        let debugMode = true; // Set to true to show debug console - helpful for testing voice commands
+        let examDuration = 180 * 60; // 3 hours in seconds
         let timerInterval;
-        let userResponses = {};
-        let questionsBySubject = {};
-        let currentSubject = "";
+        let userResponses = [];
 
         function log(message) {
             if (debugMode) {
@@ -132,7 +115,7 @@
         }
 
         function loadQuestion() {
-            if (!questions || questions.length === 0) return;
+            if (questions.length === 0) return;
 
             let questionData = questions[currentQuestionIndex];
             document.getElementById("question-number").innerText = currentQuestionIndex + 1;
@@ -151,8 +134,8 @@
             });
 
             // Check if there's a saved response for this question
-            if (userResponses[currentSubject] && userResponses[currentSubject][currentQuestionIndex]) {
-                const savedOption = userResponses[currentSubject][currentQuestionIndex];
+            if (userResponses[currentQuestionIndex]) {
+                const savedOption = userResponses[currentQuestionIndex];
                 document.getElementById(`opt${savedOption}`).checked = true;
                 document.querySelector(`label[for="opt${savedOption}"]`).classList.add("selected");
             }
@@ -173,7 +156,7 @@
 
             // Save the response
             const optionNumber = optionId.replace("opt", "");
-            userResponses[currentSubject][currentQuestionIndex] = optionNumber;
+            userResponses[currentQuestionIndex] = optionNumber;
 
             // Speak confirmation
             speakText(`Option ${optionNumber} has been marked.`);
@@ -201,65 +184,85 @@
             }
         }
 
+        // function submitExam() {
+        //     speechSynthesis.cancel(); // Stop any ongoing speech
+        //     speakText("Exam time is up. Your exam is being submitted.");
+
+        //     let assessmentId = document.getElementById("assessmentId").value;
+        //     let userId = document.getElementById("userId").value;
+
+        //     if (!assessmentId || !userId) {
+        //         alert("Error: Assessment ID or User ID is missing. Please restart the exam.");
+        //         return;
+        //     }
+
+        //     let responses = { assessment_id: assessmentId, user_id: userId };
+
+        //     // Collect responses dynamically
+        //     questions.forEach((question, index) => {
+        //         let selectedOption = document.querySelector(`input[name="option"]:checked`);
+        //         responses[`response${index + 1}`] = selectedOption ? selectedOption.value : null;
+        //     });
+
+        //     fetch("/submit_exam", {
+        //         method: "POST",
+        //         headers: {
+        //             "Content-Type": "application/json"
+        //         },
+        //         body: JSON.stringify(responses)
+        //     })
+        //         .then(response => response.json())
+        //         .then(result => {
+        //             if (result.success) {
+        //                 alert("Exam Completed! Your responses have been submitted.");
+        //                 window.location.href = "/"; // Redirect after submission
+        //             } else {
+        //                 console.error("Error submitting exam:", result.error);
+        //             }
+        //         })
+        //         .catch(error => console.error("Submission error:", error));
+        // }
         function submitExam() {
-            speechSynthesis.cancel(); // Stop any ongoing speech
-            speakText("Exam time is up. Your exam is being submitted.");
+    speechSynthesis.cancel(); // Stop any ongoing speech
+    speakText("Exam time is up. Your exam is being submitted.");
 
-            let assessmentId = document.getElementById("assessmentId").value;
-            let userId = document.getElementById("userId").value;
+    let assessmentId = document.getElementById("assessmentId").value;
+    let userId = document.getElementById("userId").value;
 
-            if (!assessmentId || !userId) {
-                alert("Error: Assessment ID or User ID is missing. Please restart the exam.");
-                return;
+    if (!assessmentId || !userId) {
+        alert("Error: Assessment ID or User ID is missing. Please restart the exam.");
+        return;
+    }
+
+    // Create response object with assessment and user IDs
+    let responses = { 
+        assessment_id: assessmentId, 
+        user_id: userId 
+    };
+
+    // Add responses from the userResponses array
+    questions.forEach((question, index) => {
+        responses[`response${index + 1}`] = userResponses[index] || null;
+    });
+
+    fetch("/submit_exam", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(responses)
+    })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert("Exam Completed! Your responses have been submitted.");
+                window.location.href = "/"; // Redirect after submission
+            } else {
+                console.error("Error submitting exam:", result.error);
             }
-
-            // Save current responses before submission
-            saveCurrentResponses();
-
-            // Create response object with assessment and user IDs
-            let responses = {
-                assessment_id: assessmentId,
-                user_id: userId
-            };
-
-            // Flatten all responses from all subjects into a single array
-            let allQuestions = [];
-            Object.keys(questionsBySubject).forEach(subject => {
-                allQuestions = allQuestions.concat(questionsBySubject[subject]);
-            });
-
-            // Add all responses to the response object
-            allQuestions.forEach((question, index) => {
-                // Find which subject this question belongs to
-                const subject = question.subject;
-                // Find the index of this question in that subject's array
-                const subjectQuestionIndex = questionsBySubject[subject].findIndex(q => q.id === question.id);
-
-                // Get the user's response for this question
-                const userResponse = userResponses[subject] ? userResponses[subject][subjectQuestionIndex] : null;
-
-                // Add to the responses object
-                responses[`response${question.id}`] = userResponse;
-            });
-
-            fetch("/submit_exam", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(responses)
-            })
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success) {
-                        alert("Exam Completed! Your responses have been submitted.");
-                        window.location.href = "/"; // Redirect after submission
-                    } else {
-                        console.error("Error submitting exam:", result.error);
-                    }
-                })
-                .catch(error => console.error("Submission error:", error));
-        }
+        })
+        .catch(error => console.error("Submission error:", error));
+}
 
         function reportRemainingTime() {
             const hours = Math.floor(examDuration / 3600);
@@ -289,76 +292,7 @@
                 speakText("This is the first question. No previous questions available.");
             }
         }
-
-        // Function to update navigation with actual subjects
-        function updateNavigation(subjects) {
-            // Clear existing nav items except the "Topics" button
-            const nav = document.querySelector('.navigation');
-            while (nav.children.length > 1) {
-                nav.removeChild(nav.lastChild);
-            }
-
-            // Add subject buttons
-            subjects.forEach(subject => {
-                const navItem = document.createElement('div');
-                navItem.className = 'nav-item';
-                navItem.textContent = subject.toUpperCase();
-                navItem.addEventListener('click', function () {
-                    setActiveSubject(subject);
-                });
-                nav.appendChild(navItem);
-            });
-        }
-
-        // Function to set active subject
-        function setActiveSubject(subject) {
-            // Update active class in navigation
-            document.querySelectorAll('.navigation .nav-item').forEach(item => {
-                if (item.textContent === subject.toUpperCase()) {
-                    item.classList.add('active');
-                } else {
-                    item.classList.remove('active');
-                }
-            });
-
-            // Save current responses for the previous subject
-            if (currentSubject && userResponses[currentSubject]) {
-                saveCurrentResponses();
-            }
-
-            // Update current subject
-            currentSubject = subject;
-
-            // Update questions array with the selected subject's questions
-            questions = questionsBySubject[subject];
-
-            // Reset to first question of the new subject
-            currentQuestionIndex = 0;
-            loadQuestion();
-
-            // Speak confirmation
-            speakText(`Switched to ${subject} section.`);
-        }
-
-        // Function to save current responses for the current subject
-        function saveCurrentResponses() {
-            const selectedOption = document.querySelector('input[name="option"]:checked');
-            if (selectedOption) {
-                const optionNumber = selectedOption.id.replace("opt", "");
-                userResponses[currentSubject][currentQuestionIndex] = optionNumber;
-            }
-        }
-
-        // Function to initialize user responses for all subjects
-        function initializeUserResponses() {
-            userResponses = {};
-
-            // Initialize responses for each subject
-            Object.keys(questionsBySubject).forEach(subject => {
-                userResponses[subject] = new Array(questionsBySubject[subject].length).fill(null);
-            });
-        }
-
+// -------------------------------------------------------------------------------------------------------------
         $(document).ready(function () {
             const assessmentId = sessionStorage.getItem("assessment_id");
             // Make debug panel visible if debug mode is on
@@ -373,6 +307,7 @@
                 window.location.href = "/"; // Redirect to home or login page
                 return;
             }
+
 
             $.ajax({
                 url: "http://127.0.0.1:5000/get_questions",
@@ -390,7 +325,7 @@
                     // Retrieve candidate name
                     let candidateName = data.candidate_name;
 
-                    // Display candidate name on the page
+                    // Display candidate name on the page (assuming you have an element with id 'candidate-name')
                     document.getElementById("candidate-name").textContent = "Candidate: " + candidateName;
 
                     // Retrieve questions
@@ -402,68 +337,42 @@
                         return;
                     }
 
-                    // Group questions by subject
-                    questionsBySubject = {};
-                    questions.forEach(question => {
-                        if (!questionsBySubject[question.subject]) {
-                            questionsBySubject[question.subject] = [];
-                        }
-                        questionsBySubject[question.subject].push(question);
-                    });
-
-                    // Update navigation with actual subjects
-                    updateNavigation(Object.keys(questionsBySubject));
-
-                    // Set the first subject as active
-                    if (Object.keys(questionsBySubject).length > 0) {
-                        currentSubject = Object.keys(questionsBySubject)[0];
-                        setActiveSubject(currentSubject);
-
-                        // Set the questions array to the first subject's questions
-                        questions = questionsBySubject[currentSubject];
-
-                        // Initialize userResponses for all questions
-                        initializeUserResponses();
-
-                        // Load the first question of the current subject
-                        currentQuestionIndex = 0;
-                        loadQuestion();
-                    }
+                    
+                    // Initialize userResponses array with null values
+                    userResponses = new Array(questions.length).fill(null);
+                    loadQuestion();
                 })
                 .fail(function (jqXHR, textStatus, errorThrown) {
                     console.log("Error fetching questions: " + textStatus + " - " + errorThrown);
                     alert("Failed to load questions. Please try again.");
                 });
 
-            // Fallback data in case the AJAX call fails for testing purposes
-            if (debugMode) {
-                questions = [
-                    {
-                        question: "If the roots of the equation x² - 6x + k = 0 are real and equal, what is the value of k?",
-                        option1: "8",
-                        option2: "9",
-                        option3: "10",
-                        option4: "12",
-                        subject: "MATHEMATICS"
-                    },
-                    {
-                        question: "In a triangle ABC, if angle A equals 60 degrees and angle B equals 45 degrees, what is angle C?",
-                        option1: "75 degrees",
-                        option2: "80 degrees",
-                        option3: "65 degrees",
-                        option4: "70 degrees",
-                        subject: "MATHEMATICS"
-                    },
-                    {
-                        question: "What is the derivative of f(x) = x³ - 4x² + 2x - 7?",
-                        option1: "3x² - 8x + 2",
-                        option2: "3x² - 4x + 2",
-                        option3: "3x² - 8x",
-                        option4: "x² - 8x + 2",
-                        subject: "MATHEMATICS"
-                    }
-                ];
-            }
+            questions = [
+                {
+                    question: "If the roots of the equation x² - 6x + k = 0 are real and equal, what is the value of k?",
+                    option1: "8",
+                    option2: "9",
+                    option3: "10",
+                    option4: "12"
+                },
+                {
+                    question: "In a triangle ABC, if angle A equals 60 degrees and angle B equals 45 degrees, what is angle C?",
+                    option1: "75 degrees",
+                    option2: "80 degrees",
+                    option3: "65 degrees",
+                    option4: "70 degrees"
+                },
+                {
+                    question: "What is the derivative of f(x) = x³ - 4x² + 2x - 7?",
+                    option1: "3x² - 8x + 2",
+                    option2: "3x² - 4x + 2",
+                    option3: "3x² - 8x",
+                    option4: "x² - 8x + 2"
+                }
+            ];
+            // Initialize userResponses array with nulls
+            userResponses = new Array(questions.length).fill(null);
+            loadQuestion();
         });
 
         $("#next").click(function () {
@@ -487,6 +396,7 @@
             const optionId = $(this).attr('id');
             selectOption(optionId);
         });
+        // });
 
         window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
@@ -566,15 +476,6 @@
                 reportRemainingTime();
                 return;
             }
-
-            // Check for subject switching (added feature)
-            Object.keys(questionsBySubject).forEach(subject => {
-                if (transcript.includes(subject.toLowerCase())) {
-                    log(`Switching to ${subject} section`);
-                    setActiveSubject(subject);
-                    return;
-                }
-            });
         }
 
         recognition.onresult = function (event) {

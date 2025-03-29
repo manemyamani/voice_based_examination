@@ -9,42 +9,52 @@ import hashlib
 import sqlite3
 
 app = Flask(__name__)
-#---------------------------
 DATABASE = "auraassist.db"
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
-# candi_name ="kalki"
 if not os.path.exists(TEMPLATES_DIR):
     os.makedirs(TEMPLATES_DIR)
+def create_table():
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            assessment_id INTEGER NOT NULL,  -- Added assessment_id column
+            question TEXT NOT NULL,
+            option1 TEXT NOT NULL,
+            option2 TEXT NOT NULL,
+            option3 TEXT NOT NULL,
+            option4 TEXT NOT NULL,
+            answer TEXT NOT NULL,
+            subject TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+create_table()
+
+
 def is_valid_assessment_id(assessment_id):
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     
-    # Query to check if the assessment ID exists
     cursor.execute("SELECT 1 FROM questions WHERE assessment_id = ?", (assessment_id,))
     result = cursor.fetchone()
     
     conn.close()
-    return result is not None  # Returns True if found, False otherwise
+    return result is not None  
 
-# API route to validate the assessment ID
 @app.route('/validate-assessment-id', methods=['POST'])
 def validate_assessment_id():
     data = request.get_json()
     assessment_id = data.get('assessment_id')
-
     if not assessment_id:
-        return jsonify({"valid": False})  # If no ID is provided, return invalid
-
-    # Check if the ID exists in the database
-    valid = is_valid_assessment_id(assessment_id)
-    
+        return jsonify({"valid": False})     
+    valid = is_valid_assessment_id(assessment_id)    
     return jsonify({"valid": valid})
-
-
-
-
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -64,35 +74,25 @@ def register():
             gender = request.form["gender"]
             password = request.form["password"]
             confirm_password = request.form["confirm_password"]
-
             if password != confirm_password:
                 return jsonify({"error": "Passwords do not match!"}), 400
-
             conn = sqlite3.connect(DATABASE)
-            cursor = conn.cursor()
-
-            # Check if email already exists
+            cursor = conn.cursor()          
             cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
             existing_user = cursor.fetchone()
-
             if existing_user:
                 conn.close()
                 return jsonify({"error": "Email already registered!"}), 400
-
             hashed_password = hash_password(password)
-
             cursor.execute('''
                 INSERT INTO users (first_name, last_name, email, mobile, date_of_birth, gender, password)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (first_name, last_name, email, mobile, date_of_birth, gender, hashed_password))
-
             conn.commit()
             conn.close()
-
             return jsonify({"success": "User registered successfully!"}), 200
         except Exception as e:
             return jsonify({"error": str(e)}), 500
-
     return render_template("register.html")
 
 
@@ -100,10 +100,8 @@ def register():
 @app.route('/submit_question/', methods=['POST'])
 def submit_question():
     try:
-        data = request.json
-
-        # Extract values from request
-        assessment_id = data.get('assessment_id')  # Get assessment_id
+        data = request.json        
+        assessment_id = data.get('assessment_id') 
         question = data.get('question')
         option1 = data.get('option1')
         option2 = data.get('option2')
@@ -111,8 +109,6 @@ def submit_question():
         option4 = data.get('option4')
         answer = data.get('answer')
         subject = data.get('subject')
-
-        # Insert into the database
         conn = connect_db()
         cursor = conn.cursor()
         cursor.execute('''
@@ -131,20 +127,14 @@ def submit_question():
 @app.route("/exam")
 def home():
     return render_template("exam.html") 
+
 @app.route("/get_questions", methods=["GET"])
 def get_questions():
     try:
-        # Get assessment_id from query parameters
         assessment_id = request.args.get('assessment_id')
         candidate_id = request.args.get("candidate_id")
-        print("----------------------------------------------------")
-        print(f"----------------{candi_name}--------------------")
-        print("----------------------------------------------------")
-
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
-        
-        # If assessment_id is provided, filter questions
         if assessment_id:
             cursor.execute("""
                 SELECT 
@@ -161,7 +151,7 @@ def get_questions():
                 WHERE assessment_id = ?
             """, (assessment_id,))
         else:
-            # If no assessment_id, return an error
+            
             conn.close()
             return jsonify({"error": "Assessment ID is required"}), 400
         
@@ -195,7 +185,8 @@ def get_questions():
         return jsonify({"error": f"Database error: {str(e)}"}), 500
     except Exception as e:
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 400
-    
+
+
 @app.route("/submit_exam", methods=["POST"])
 def submit_exam():
     try:
@@ -250,17 +241,12 @@ def submit_exam():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-
 app.secret_key = 'your_secret_key'  
-
 KNOWN_FACES_DIR = "known_faces"
 
-# Global variables for webcam and latest frame
 cap = None
 latest_frame = None
 
-# Load known faces from storage
 def load_known_faces():
     known_encodings = []
     known_names = []
@@ -272,13 +258,12 @@ def load_known_faces():
 
         if encoding:
             known_encodings.append(encoding[0])
-            known_names.append(filename.split(".")[0])  # Use filename as candidate ID
+            known_names.append(filename.split(".")[0])  
 
     return known_encodings, known_names
 
 KNOWN_ENCODINGS, KNOWN_NAMES = load_known_faces()
 
-# Database connection
 def connect_db():
     return sqlite3.connect('auraassist.db')
 
@@ -306,14 +291,13 @@ def login():
         conn.close()
 
         if user and verify_password(user[1], password):
-            session['user_id'] = user[0]  # Store user session
-            print(f"User {user[0]} logged in")  # Debugging log
+            session['user_id'] = user[0] 
+            print(f"User {user[0]} logged in")  
 
-            # Check if the request is AJAX (fetch)
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 return jsonify({"redirect_url": url_for("host_page")})
             else:
-                return redirect(url_for("assessment"))  # Regular form submission
+                return redirect(url_for("assessment"))  
 
         return jsonify({"error": "Invalid email or password!"}), 401
 
@@ -321,28 +305,23 @@ def login():
 @app.route("/assessment", methods=["GET", "POST"])
 def assessment():
     if request.method == "POST":
-        # Handle assessment submission logic
+       
         assessment_id = request.form["assessmentId"]
         question_count = request.form["questionCount"]
 
-        # Redirect to host.html after setting assessment
         return redirect(url_for("host_page", assessmentId=assessment_id, questionCount=question_count))
 
     return render_template("assessment.html")
 
-# Function to get the next assessment ID
 def get_next_assessment_id():
     try:
-        conn = sqlite3.connect(DATABASE)  # Use the correct database
+        conn = sqlite3.connect(DATABASE) 
         cursor = conn.cursor()
-
-        # Query to get the max assessment_id from the questions table
         cursor.execute("SELECT MAX(assessment_id) FROM questions")
         max_id = cursor.fetchone()[0]
 
         conn.close()
 
-        # If no records exist, start from 1, otherwise increment max_id
         return (max_id + 1) if max_id else 1
 
     except Exception as e:
@@ -472,8 +451,8 @@ def verify_face():
         # Log verification
         print(f"✅ Verified User: {matched_name}")
         candi_name = str(matched_name)
-        if candi_name!="kalki":
-            print("u fucked")
+      
+            
         # Set session variables for security
         session['candidate_id'] = matched_name
         session['assessment_id'] = assessment_id
@@ -514,4 +493,4 @@ def video_feed():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)

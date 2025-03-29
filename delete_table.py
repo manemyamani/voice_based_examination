@@ -9,7 +9,7 @@ def delete_questions_table():
         cursor.execute("DROP TABLE IF EXISTS responses;")
         conn.commit()
         conn.close()
-        print("✅ Table 'questions' deleted successfully.")
+        print("✅ Table 'responses' deleted successfully.")
     except Exception as e:
         print("❌ Error:", str(e))
 

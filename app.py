@@ -367,8 +367,6 @@ def stop_camera():
 @app.route('/face-verification')
 def face_verification_page():
     return render_template('face_verification.html')
-
-
 @app.route('/verify-face', methods=['POST'])
 def verify_face():
     global latest_frame, candi_name
@@ -376,33 +374,43 @@ def verify_face():
     assessment_id = data.get('assessment_id')
 
     if not assessment_id:
-        return jsonify({'error': 'Assessment ID is required!'}), 400
+        return jsonify({
+            'error': 'Assessment ID is required!',
+            'voice_alert': 'Assessment ID is required. Please provide a valid assessment ID.'
+        }), 400
 
     if not start_camera():
-        return jsonify({'error': 'Could not access webcam!'}), 500
+        return jsonify({
+            'error': 'Could not access webcam!',
+            'voice_alert': 'Camera error. Could not access webcam. Please check your camera settings.'
+        }), 500
 
     success, frame = cap.read()
     if not success:
         stop_camera()  # Stop camera if frame is not captured
-        return jsonify({'error': 'Could not capture image!'}), 500
+        return jsonify({
+            'error': 'Could not capture image!',
+            'voice_alert': 'Failed to capture image. Please try again.'
+        }), 500
 
     latest_frame = frame  # Store latest frame
 
     # Convert frame to RGB for face recognition
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     face_locations = face_recognition.face_locations(frame_rgb)
-    # Find faces in the captured image
-    face_encodings = face_recognition.face_encodings(frame_rgb, face_locations)
-    if len(face_locations) > 1:
+    
+    if len(face_locations) == 0:
         stop_camera()
         return jsonify({
-            'error': 'Multiple faces detected! Only one person is allowed.',
-            'multiple_faces': True
+            'error': 'No face detected!',
+            'voice_alert': 'No face detected. Please position yourself in front of the camera.'
         }), 400
+        
     if len(face_locations) > 1:
         stop_camera()
         return jsonify({
             'error': 'Multiple faces detected! Only one person is allowed.',
+            'voice_alert': 'Multiple faces detected. Only one person is allowed during the exam.',
             'multiple_faces': True
         }), 400
 
@@ -419,14 +427,13 @@ def verify_face():
                 
                 if encoding:
                     known_face_encodings.append(encoding[0])
-                    # Use filename (without extension) as the name
                     known_face_names.append(os.path.splitext(filename)[0])
             except Exception as e:
                 print(f"Error processing {filename}: {e}")
 
     # Verification parameters
     MATCH_THRESHOLD = 0.5  # Adjust for stricter matching
-    current_face_encoding = face_encodings[0]
+    current_face_encoding = face_recognition.face_encodings(frame_rgb, face_locations)[0]
 
     # Compare with known faces
     matches = face_recognition.compare_faces(known_face_encodings, current_face_encoding)
@@ -452,7 +459,6 @@ def verify_face():
         print(f"✅ Verified User: {matched_name}")
         candi_name = str(matched_name)
       
-            
         # Set session variables for security
         session['candidate_id'] = matched_name
         session['assessment_id'] = assessment_id
@@ -460,15 +466,18 @@ def verify_face():
         return jsonify({
             'success': True,
             'message': f'Face verified for {matched_name}',
+            'voice_alert': f'Verification successful.',
             'username': matched_name,
             'redirect_url': url_for('instructions_page')
         }), 200
     else:
         return jsonify({
             'error': 'Unauthorized user! Only registered candidates can take the exam.', 
+            'voice_alert': 'Unauthorized user detected. Only registered candidates can take this exam.',
             'unauthorized': True
         }), 401
-        
+
+
 
 # Webcam streaming function
 def generate_frames():

@@ -15,28 +15,6 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 if not os.path.exists(TEMPLATES_DIR):
     os.makedirs(TEMPLATES_DIR)
-def create_table():
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS questions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            assessment_id INTEGER NOT NULL,  -- Added assessment_id column
-            question TEXT NOT NULL,
-            option1 TEXT NOT NULL,
-            option2 TEXT NOT NULL,
-            option3 TEXT NOT NULL,
-            option4 TEXT NOT NULL,
-            answer TEXT NOT NULL,
-            subject TEXT NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-create_table()
-
-
 def is_valid_assessment_id(assessment_id):
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
@@ -277,7 +255,54 @@ def instructions_page():
         return render_template('instructions.html')
     else:
         return redirect(url_for('landing_page'))
-
+@app.route("/transfer_questions", methods=["POST"])
+def transfer_questions():
+    try:
+        data = request.get_json()
+        assessment_id = data.get("assessmentId")
+        
+        # Connect to database
+        conn = sqlite3.connect("auraassist.db")
+        cursor = conn.cursor()
+        
+        # First clear existing questions with this assessment ID (optional)
+        cursor.execute("DELETE FROM questions WHERE assessment_id = ?", (assessment_id,))
+        
+        # Fetch questions from EMCET table with the specified assessment ID
+        cursor.execute("SELECT * FROM EMCET WHERE assessment_id = ?", (assessment_id,))
+        emcet_questions = cursor.fetchall()
+        
+        if not emcet_questions:
+            return jsonify({"error": "No questions found with the specified assessment ID"}), 404
+        
+        # Insert questions into questions table
+        for question in emcet_questions:
+            # Skip the ID column from EMCET when inserting into questions
+            # The order should match your table schema: assessment_id, question, option1, option2, option3, option4, answer, subject
+            cursor.execute("""
+                INSERT INTO questions
+                (assessment_id, question, option1, option2, option3, option4, answer, subject)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                question[1],  # assessment_id
+                question[2],  # question
+                question[3],  # option1
+                question[4],  # option2
+                question[5],  # option3
+                question[6],  # option4
+                question[7],  # answer
+                question[8]   # subject
+            ))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({"success": True, "message": f"Transferred {len(emcet_questions)} questions to questions table"}), 200
+    
+    except Exception as e:
+        conn.rollback()  # Roll back in case of error
+        conn.close()
+        return jsonify({"error": str(e)}), 500
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":

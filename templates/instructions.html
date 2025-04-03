@@ -5,53 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartAura Examination System</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/instructions.css') }}">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background-color: #f4f4f4;
-            text-align: center;
-        }
-        .container {
-            max-width: 800px;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            margin: auto;
-        }
-        h2, h3, p {
-            text-align: center;
-        }
-        ul {
-            text-align: center;
-            list-style-position: inside;
-            padding: 0;
-        }
-        .button-container {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .start-button {
-            background-color: #28a745;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            border-radius: 5px;
-        }
-        .start-button:hover {
-            background-color: #218838;
-        }
-    </style>
 </head>
 <body>
     <div class="container">
         <h2>Instructions for SmartAura Examination System.</h2>
         <h3>General Guidelines.</h3>
         <ul>
-            <li>Navigate back to a previous question by saying "Previous question."</li>
+            <li>Remember the commands and use them for navigation.</li>
+            <li>To select an option, say "Select option 1" or simply "Option 1.</li>
+            <li>To listen to the question again, say "Repeat question" or "Repeat."</li>
+            <li>To move to the next question, say "Next question" or "Next."</li>
+            <li>To return to the previous question, say "Previous question" or "Previous."</li>
+            <li>o switch to a different section, say "Move to Chemistry," "Move to Physics," or "Move to Mathematics."</li>
+            <li>To check the remaining time, say "Time" or "Remaining time."</li>
+            <li>To submit the exam, say "Submit exam."</li>
+            <li>To navigate back to a previous question, say "Previous question."</li>
         </ul>
         <h3>Acknowledgment</h3>
         <p>By proceeding, you agree to follow the rules and guidelines.</p>
@@ -113,7 +81,7 @@
             if (command.includes("start exam")) {
                 startExam();
             } else {
-                console.log("Unrecognized command:", command);
+                speakText("Unrecognized command:", command);
             }
         };
     
@@ -143,7 +111,7 @@
             setTimeout(speakReminder, 20000); // Start voice alert after 20 seconds
         };
         
-        document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function () {
     const urlParams = new URLSearchParams(window.location.search);
     const assessmentID = urlParams.get("assessment_id") || sessionStorage.getItem("assessment_id");
     const userID = urlParams.get("user_id") || sessionStorage.getItem("user_id");

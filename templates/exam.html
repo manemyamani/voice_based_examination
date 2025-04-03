@@ -11,13 +11,12 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
 </head>
 
-<bo>
-    <!-- ------------------------------------------------------------------------------------------------------- -->
+<body>
     <header>
         <div class="exam-title">JEE MAINS<span class="mock-exam-label">mains Exam</span></div>
-        <h2 id="candidate-name"></h2>
+        <h3 id="candidate-name"></h3>
         <div class="timer-display" id="exam-timer">03:00:00</div>
-        <button class="submit-btn" id="submit-exam">Submit</button>
+        <button class="submit-btn" id="submit-exam" onclick="submitExam()">Submit</button>
     </header>
     <form id="exam-form" action="/submit_exam" method="POST">
         <input type="hidden" id="assessmentId" name="assessment_id">
@@ -26,7 +25,7 @@
 
     <div class="navigation">
         <div class="nav-item topics">Topics</div>
-        <!-- Subject buttons will be added dynamically by JavaScript -->
+        
     </div>
 
     <div class="container">
@@ -56,7 +55,6 @@
             </div>
         </div>
     </div>
-    <!-- ------------------------------------------------------------------------------------------------------- -->
 
     <div class="bottom-navigation">
         <button id="previous" class="nav-btn prev-btn">Previous</button>
@@ -87,7 +85,6 @@
         }
 
         function speakText(text) {
-            // Cancel any ongoing speech first
             speechSynthesis.cancel();
 
             const speech = new SpeechSynthesisUtterance(text);
@@ -124,7 +121,6 @@
             document.getElementById("opt3-text").innerText = questionData.option3;
             document.getElementById("opt4-text").innerText = questionData.option4;
 
-            // Clear any selected options
             document.querySelectorAll('input[name="option"]').forEach(input => {
                 input.checked = false;
             });
@@ -132,7 +128,6 @@
                 label.classList.remove("selected");
             });
 
-            // Check if there's a saved response for this question
             if (userResponses[currentSubject] && userResponses[currentSubject][currentQuestionIndex]) {
                 const savedOption = userResponses[currentSubject][currentQuestionIndex];
                 document.getElementById(`opt${savedOption}`).checked = true;
@@ -143,21 +138,17 @@
         }
 
         function selectOption(optionId) {
-            // First clear any existing selections
             document.querySelectorAll(".options label").forEach(label => label.classList.remove("selected"));
             document.querySelectorAll('input[name="option"]').forEach(input => {
                 input.checked = false;
             });
 
-            // Then select the new option
             document.getElementById(optionId).checked = true;
             document.querySelector(`label[for="${optionId}"]`).classList.add("selected");
 
-            // Save the response
             const optionNumber = optionId.replace("opt", "");
             userResponses[currentSubject][currentQuestionIndex] = optionNumber;
 
-            // Speak confirmation
             speakText(`Option ${optionNumber} has been marked.`);
         }
 
@@ -184,7 +175,7 @@
         }
 
         function submitExam() {
-    speechSynthesis.cancel(); // Stop any ongoing speech
+    speechSynthesis.cancel();
     speakText("Your exam is being submitted. Please wait.");
 
     let assessmentId = document.getElementById("assessmentId").value;
@@ -194,33 +185,22 @@
         speakText("Error: Assessment ID or User ID is missing. Please restart the exam.");
         return;
     }
-
-    // Save current responses before submission
     saveCurrentResponses();
-
-    // Create response object with assessment and user IDs
     let responses = {
         assessment_id: assessmentId,
         user_id: userId
     };
 
-    // Flatten all responses from all subjects into a single array
     let allQuestions = [];
     Object.keys(questionsBySubject).forEach(subject => {
         allQuestions = allQuestions.concat(questionsBySubject[subject]);
     });
 
-    // Add all responses to the response object
     allQuestions.forEach((question, index) => {
-        // Find which subject this question belongs to
         const subject = question.subject;
-        // Find the index of this question in that subject's array
         const subjectQuestionIndex = questionsBySubject[subject].findIndex(q => q.id === question.id);
-
-        // Get the user's response for this question
         const userResponse = userResponses[subject] ? userResponses[subject][subjectQuestionIndex] : null;
 
-        // Add to the responses object
         responses[`response${question.id}`] = userResponse;
     });
 
@@ -235,10 +215,9 @@
         .then(result => {
             if (result.success) {
                 speakText("Exam Completed! Your responses have been submitted successfully.");
-                // Set a timeout to allow the speech to complete before redirecting
                 setTimeout(() => {
-                    window.location.href = "/"; // Redirect after submission
-                }, 5000); // 5 seconds delay to ensure speech completes
+                    window.location.href = "/";
+                }, 5000);
             } else {
                 speakText("Error submitting exam. Please contact the exam administrator.");
                 console.error("Error submitting exam:", result.error);
@@ -250,66 +229,6 @@
         });
 }
 
-        // function submitExam() {
-        //     speechSynthesis.cancel(); // Stop any ongoing speech
-        //     // speakText("Exam time is up. Your exam is being submitted.");
-
-        //     let assessmentId = document.getElementById("assessmentId").value;
-        //     let userId = document.getElementById("userId").value;
-
-        //     if (!assessmentId || !userId) {
-        //         alert("Error: Assessment ID or User ID is missing. Please restart the exam.");
-        //         return;
-        //     }
-
-        //     // Save current responses before submission
-        //     saveCurrentResponses();
-
-        //     // Create response object with assessment and user IDs
-        //     let responses = {
-        //         assessment_id: assessmentId,
-        //         user_id: userId
-        //     };
-
-        //     // Flatten all responses from all subjects into a single array
-        //     let allQuestions = [];
-        //     Object.keys(questionsBySubject).forEach(subject => {
-        //         allQuestions = allQuestions.concat(questionsBySubject[subject]);
-        //     });
-
-        //     // Add all responses to the response object
-        //     allQuestions.forEach((question, index) => {
-        //         // Find which subject this question belongs to
-        //         const subject = question.subject;
-        //         // Find the index of this question in that subject's array
-        //         const subjectQuestionIndex = questionsBySubject[subject].findIndex(q => q.id === question.id);
-
-        //         // Get the user's response for this question
-        //         const userResponse = userResponses[subject] ? userResponses[subject][subjectQuestionIndex] : null;
-
-        //         // Add to the responses object
-        //         responses[`response${question.id}`] = userResponse;
-        //     });
-
-        //     fetch("/submit_exam", {
-        //         method: "POST",
-        //         headers: {
-        //             "Content-Type": "application/json"
-        //         },
-        //         body: JSON.stringify(responses)
-        //     })
-        //         .then(response => response.json())
-        //         .then(result => {
-        //             if (result.success) {
-        //                 alert("Exam Completed! Your responses have been submitted.");
-        //                 window.location.href = "/"; // Redirect after submission
-        //             } else {
-        //                 console.error("Error submitting exam:", result.error);
-        //             }
-        //         })
-        //         .catch(error => console.error("Submission error:", error));
-        // }
-
         function reportRemainingTime() {
             const hours = Math.floor(examDuration / 3600);
             const minutes = Math.floor((examDuration % 3600) / 60);
@@ -318,75 +237,6 @@
             const formattedTime = formatTime(examDuration);
             speakText(`The time left is ${formattedTime}.`);
         }
-
-//         function goToNextQuestion() {
-//     // Save current response
-//     saveCurrentResponses();
-    
-//     // Check if this is the last question of the current section
-//     if (currentQuestionIndex === questions.length - 1) {
-//         // Announce that this is the last question of the section
-//         speakText(`This is the last question of this section ${currentSubject}. Say "move to section" followed by the section name to switch sections.`);
-        
-//         // Still load the question (in case they want to review their answer)
-//         loadQuestion();
-//     } else {
-//         // Not the last question of the section, proceed as normal
-//         currentQuestionIndex++;
-//         loadQuestion();
-//         speakText("Moving to next question");
-//     }
-// }
-// function goToNextQuestion() {
-//     // Save current response
-//     saveCurrentResponses();
-    
-//     // Check if this is the last question of the current section
-//     if (currentQuestionIndex === questions.length - 1) {
-//         // We are already at the last question of this section
-//         speakText(`This is the last question of the ${currentSubject} section. Say "move to section" followed by the section name to switch to another section.`);
-        
-//         // Don't increment the index since we're already at the last question
-//         loadQuestion(); // Just reload the current question
-//     } else {
-//         // Not the last question of the section, proceed as normal
-//         currentQuestionIndex++;
-        
-//         // Check if we're now at the last question after incrementing
-//         if (currentQuestionIndex === questions.length - 1) {
-//             loadQuestion();
-//             speakText(`This is the last question of the ${currentSubject} section. After answering, say "move to section" followed by the section name to switch to another section.`);
-//         } else {
-//             loadQuestion();
-//             speakText("Moving to next question");
-//         }
-//     }
-// }
-// function goToNextQuestion() {
-//     // Save current response
-//     saveCurrentResponses();
-    
-//     // Check if this is the last question of the current section
-//     if (currentQuestionIndex === questions.length - 1) {
-//         // We are already at the last question of this section
-//         speakText(`This is the last question of the ${currentSubject} section. Say "move to section" followed by the section name to switch to another section.`);
-        
-//         // Don't increment the index since we're already at the last question
-//         loadQuestion(); // Just reload the current question
-//     } else {
-//         // Not the last question of the section, increment index
-//         currentQuestionIndex++;
-        
-//         // Check if we're now at the last question after incrementing
-//         if (currentQuestionIndex === questions.length - 1) {
-//             loadQuestion();
-//             speakText(`This is the last question of the ${currentSubject} section. After answering, say "move to section" followed by the section name to switch to another section.`);
-//         } else {
-//             loadQuestion();
-//             speakText("Moving to next question");
-//         }
-//     }
-// }
 function goToNextQuestion() {
     if (currentQuestionIndex < questions.length - 1) {
         currentQuestionIndex++;
@@ -405,16 +255,11 @@ function goToPreviousQuestion() {
         speakText(`This is the first question of the ${currentSubject} section.`);
     }
 }
-
-        // Function to update navigation with actual subjects
         function updateNavigation(subjects) {
-            // Clear existing nav items except the "Topics" button
             const nav = document.querySelector('.navigation');
             while (nav.children.length > 1) {
                 nav.removeChild(nav.lastChild);
             }
-
-            // Add subject buttons
             subjects.forEach(subject => {
                 const navItem = document.createElement('div');
                 navItem.className = 'nav-item';
@@ -426,9 +271,7 @@ function goToPreviousQuestion() {
             });
         }
 
-        // Function to set active subject
         function setActiveSubject(subject) {
-            // Update active class in navigation
             document.querySelectorAll('.navigation .nav-item').forEach(item => {
                 if (item.textContent === subject.toUpperCase()) {
                     item.classList.add('active');
@@ -437,26 +280,18 @@ function goToPreviousQuestion() {
                 }
             });
 
-            // Save current responses for the previous subject
             if (currentSubject && userResponses[currentSubject]) {
                 saveCurrentResponses();
             }
 
-            // Update current subject
             currentSubject = subject;
 
-            // Update questions array with the selected subject's questions
             questions = questionsBySubject[subject];
-
-            // Reset to first question of the new subject
             currentQuestionIndex = 0;
             loadQuestion();
-
-            // Speak confirmation
             speakText(`Switched to ${subject} section.`);
         }
 
-        // Function to save current responses for the current subject
         function saveCurrentResponses() {
             const selectedOption = document.querySelector('input[name="option"]:checked');
             if (selectedOption) {
@@ -465,11 +300,8 @@ function goToPreviousQuestion() {
             }
         }
 
-        // Function to initialize user responses for all subjects
         function initializeUserResponses() {
             userResponses = {};
-
-            // Initialize responses for each subject
             Object.keys(questionsBySubject).forEach(subject => {
                 userResponses[subject] = new Array(questionsBySubject[subject].length).fill(null);
             });
@@ -477,16 +309,13 @@ function goToPreviousQuestion() {
 
         $(document).ready(function () {
             const assessmentId = sessionStorage.getItem("assessment_id");
-            // Make debug panel visible if debug mode is on
             if (debugMode) {
                 document.getElementById('debug-log').style.display = 'block';
             }
-
-            // Start exam timer
             timerInterval = setInterval(updateTimer, 1000);
             if (!assessmentId) {
                 alert("No assessment ID found. Please start the assessment process again.");
-                window.location.href = "/"; // Redirect to home or login page
+                window.location.href = "/";
                 return;
             }
 
@@ -503,13 +332,9 @@ function goToPreviousQuestion() {
                         return;
                     }
 
-                    // Retrieve candidate name
                     let candidateName = data.candidate_name;
-
-                    // Display candidate name on the page
                     document.getElementById("candidate-name").textContent = "Candidate: " + candidateName;
 
-                    // Retrieve questions
                     questions = data.questions;
 
                     if (questions.length === 0) {
@@ -518,7 +343,6 @@ function goToPreviousQuestion() {
                         return;
                     }
 
-                    // Group questions by subject
                     questionsBySubject = {};
                     questions.forEach(question => {
                         if (!questionsBySubject[question.subject]) {
@@ -527,21 +351,15 @@ function goToPreviousQuestion() {
                         questionsBySubject[question.subject].push(question);
                     });
 
-                    // Update navigation with actual subjects
                     updateNavigation(Object.keys(questionsBySubject));
 
-                    // Set the first subject as active
                     if (Object.keys(questionsBySubject).length > 0) {
                         currentSubject = Object.keys(questionsBySubject)[0];
                         setActiveSubject(currentSubject);
 
-                        // Set the questions array to the first subject's questions
                         questions = questionsBySubject[currentSubject];
 
-                        // Initialize userResponses for all questions
                         initializeUserResponses();
-
-                        // Load the first question of the current subject
                         currentQuestionIndex = 0;
                         loadQuestion();
                     }
@@ -551,7 +369,6 @@ function goToPreviousQuestion() {
                     alert("Failed to load questions. Please try again.");
                 });
 
-            // Fallback data in case the AJAX call fails for testing purposes
             if (debugMode) {
                 questions = [
                     {
@@ -598,7 +415,6 @@ function goToPreviousQuestion() {
             submitExam();
         });
 
-        // Add click handlers for options
         $('input[name="option"]').change(function () {
             const optionId = $(this).attr('id');
             selectOption(optionId);
@@ -609,43 +425,32 @@ function goToPreviousQuestion() {
         recognition.continuous = true;
         recognition.lang = "en-US";
 
-        // Fix to prevent multiple listeners
         let recognitionRunning = false;
 
         function processSpeechCommand(transcript) {
     transcript = transcript.toLowerCase().trim();
     log("Recognized: " + transcript);
 
-    // Existing option patterns
     const option1Patterns = ["option 1", "option one", "first option", "choice 1", "answer 1"];
     const option2Patterns = ["option 2", "option two", "second option", "choice 2", "answer 2"];
     const option3Patterns = ["option 3", "option three", "third option", "choice 3", "answer 3"];
     const option4Patterns = ["option 4", "option four", "fourth option", "choice 4", "answer 4"];
 
-    // Existing command patterns
     const nextPatterns = ["next", "next question"];
     const prevPatterns = ["previous", "previous question", "go back", "prev"];
     const repeatPatterns = ["repeat", "repeat question", "read question"];
     const submitPatterns = ["submit", "submit exam", "finish", "finish exam"];
     const timePatterns = ["time", "time left", "remaining time", "remaining tym"];
     
-    // New pattern for section transition
     const sectionTransitionPattern = "move to section";
-
-    // Simple function to check if transcript contains any of the patterns
     function containsAny(patterns) {
         return patterns.some(pattern => transcript.includes(pattern));
     }
-
-    // Check for section transition command first
     if (transcript.includes(sectionTransitionPattern)) {
-        // Extract the section name that comes after "move to section"
         const parts = transcript.split(sectionTransitionPattern);
         
         if (parts.length > 1) {
             const requestedSection = parts[1].trim();
-            
-            // Check if the requested section exists (case insensitive)
             const availableSections = Object.keys(questionsBySubject);
             const matchedSection = availableSections.find(section => 
                 section.toLowerCase() === requestedSection ||
@@ -657,14 +462,12 @@ function goToPreviousQuestion() {
                 setActiveSubject(matchedSection);
                 return;
             } else {
-                // Section not found, provide feedback
                 speakText(`Section ${requestedSection} not found. Available sections are: ${availableSections.join(", ")}`);
                 return;
             }
         }
     }
     
-    // Existing option selection code
     if (containsAny(option1Patterns)) {
         log("Selecting option 1");
         selectOption("opt1");
@@ -685,8 +488,6 @@ function goToPreviousQuestion() {
         selectOption("opt4");
         return;
     }
-
-    // Existing navigation commands
     if (containsAny(nextPatterns)) {
         log("Going to next question");
         goToNextQuestion();
@@ -713,7 +514,6 @@ function goToPreviousQuestion() {
         return;
     }
 
-    // Existing section switching fallback
     Object.keys(questionsBySubject).forEach(subject => {
         if (transcript.includes(subject.toLowerCase())) {
             log(`Switching to ${subject} section`);
@@ -729,7 +529,6 @@ function goToPreviousQuestion() {
         };
 
         recognition.onend = function () {
-            // Prevent multiple recognition instances
             if (recognitionRunning) {
                 log("Recognition restarted");
                 setTimeout(() => {
@@ -737,7 +536,6 @@ function goToPreviousQuestion() {
                         recognition.start();
                     } catch (e) {
                         log("Error restarting recognition: " + e.message);
-                        // Try again after a short delay
                         setTimeout(() => {
                             if (recognitionRunning) recognition.start();
                         }, 10000);
@@ -748,7 +546,6 @@ function goToPreviousQuestion() {
 
         recognition.onerror = function (event) {
             log("Recognition error: " + event.error);
-            // If there's an error, wait a bit before restarting
             setTimeout(() => {
                 if (recognitionRunning) {
                     try {
@@ -760,7 +557,6 @@ function goToPreviousQuestion() {
             }, 1000);
         };
 
-        // Start speech recognition
         recognitionRunning = true;
         try {
             recognition.start();
@@ -769,7 +565,6 @@ function goToPreviousQuestion() {
             log("Error starting speech recognition: " + e.message);
         }
 
-        // Add a keyboard shortcut (press D key) to toggle debug mode
         document.addEventListener('keydown', function (e) {
             if (e.key === 'd' && e.ctrlKey) {
                 debugMode = !debugMode;
@@ -780,7 +575,6 @@ function goToPreviousQuestion() {
             }
         });
 
-        // Add keyboard navigation for testing
         document.addEventListener('keydown', function (e) {
             if (e.key === 'ArrowRight') {
                 goToNextQuestion();
@@ -826,7 +620,6 @@ async function monitor() {
   const model = await blazeface.load();
   const video = document.getElementById('video');
   
-  // Add variables to track multiple face detections
   let multipleFaceDetections = 0;
   let isCurrentlyWarning = false;
   let isLookingAwayWarning = false;
@@ -837,48 +630,40 @@ async function monitor() {
     try {
       const predictions = await model.estimateFaces(video, false);
       
-      // First ensure we're getting valid predictions
       if (!predictions || !Array.isArray(predictions)) {
         log("Invalid face detection result");
         return;
       }
       
-      // Add a time-based reset to reduce false positives
       const currentTime = Date.now();
       const timeSinceLastDetection = currentTime - lastDetectionTime;
       lastDetectionTime = currentTime;
       
-      // If there was a significant delay between detections, reset the counter
-      if (timeSinceLastDetection > 5000) { // 5 seconds
+      if (timeSinceLastDetection > 5000) {
         consecutiveMultipleFaces = 0;
       }
 
       if (predictions.length > 1) {
-        // Only speak the warning if not already in warning state
         if (!isCurrentlyWarning) {
           speakText("Multiple faces detected. Only one person should be visible.");
           isCurrentlyWarning = true;
           log("Multiple faces detected: " + predictions.length);
         }
         
-        // Increment consecutive detections counter
         consecutiveMultipleFaces++;
         
-        // Log for debugging
         log("Consecutive multiple faces: " + consecutiveMultipleFaces);
         
-        // If we've detected multiple faces more than 3 times consecutively, submit the exam
         if (consecutiveMultipleFaces > 3) {
           log("Multiple face violations threshold reached. Submitting exam...");
           speakText("Multiple face violations detected. Submitting exam.");
-          // Call the actual submitExam function
+          
           submitExam();
         }
       } else {
-        // Reset warning state when only one face is detected
-        isCurrentlyWarning = false;
         
-        // Reset consecutive counter if we detect just one face
+        isCurrentlyWarning = false;        
+        
         if (consecutiveMultipleFaces > 0) {
           consecutiveMultipleFaces--;
         }
@@ -889,32 +674,16 @@ async function monitor() {
             const leftEye = face.landmarks[0];
             const rightEye = face.landmarks[1];
             const nose = face.landmarks[2];
-
-            // Calculate horizontal distance between eyes
             const eyeDistance = Math.abs(leftEye[0] - rightEye[0]);
-             
-            // Calculate the vertical alignment of nose with eyes
             const nosePosition = nose[0] - ((leftEye[0] + rightEye[0]) / 2);
-
-            // Implement looking away detection if needed
-            // const lookingAwayThreshold = eyeDistance * 0.4; // Relative to eye distance
-            // if (Math.abs(nosePosition) > lookingAwayThreshold) {
-            //   if (!isLookingAwayWarning) {
-            //     speakText("Please look at the screen.");
-            //     isLookingAwayWarning = true;
-            //   }
-            // } else {
-            //   isLookingAwayWarning = false;
-            // }
           }
         }
       }
     } catch (error) {
       log("Face detection error: " + error.message);
     }
-  }, 1000); // Run detection every second
+  }, 1000);
 }
-
 async function init() {
   try {
     await setupCamera();
@@ -925,10 +694,7 @@ async function init() {
     log("Camera initialization error: " + error.message);
   }
 }
-
-// Make sure this init function is called
 init();
 </script>
 </body>
-
 </html>

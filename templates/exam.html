@@ -174,7 +174,25 @@
             }
         }
 
-        function submitExam() {
+        // Variable to track if we're in confirmation mode
+let awaitingSubmitConfirmation = false;
+
+// Update the submitExam function to include confirmation
+function submitExam() {
+    // If we're not already awaiting confirmation and there's still time left
+    if (!awaitingSubmitConfirmation && examDuration > 60) { // More than 1 minute left
+        awaitingSubmitConfirmation = true;
+        speechSynthesis.cancel();
+        
+        const minutesLeft = Math.floor(examDuration / 60);
+        speakText(`You still have ${minutesLeft} minutes left. Are you sure you want to submit the exam? Say 'yes submit' to confirm or 'cancel' to continue the exam.`);
+        
+        log("Awaiting submission confirmation...");
+        return;
+    }
+    
+    // If confirmation received or time is almost up (less than 1 minute), proceed with submission
+    awaitingSubmitConfirmation = false;
     speechSynthesis.cancel();
     speakText("Your exam is being submitted. Please wait.");
 
@@ -185,6 +203,7 @@
         speakText("Error: Assessment ID or User ID is missing. Please restart the exam.");
         return;
     }
+    
     saveCurrentResponses();
     let responses = {
         assessment_id: assessmentId,
@@ -228,6 +247,210 @@
             console.error("Submission error:", error);
         });
 }
+
+// Update the processSpeechCommand function to handle confirmation responses
+function processSpeechCommand(transcript) {
+    transcript = transcript.toLowerCase().trim();
+    log("Recognized: " + transcript);
+
+    // First check if we're awaiting confirmation for submission
+    if (awaitingSubmitConfirmation) {
+        const confirmPatterns = ["yes", "yes submit", "confirm", "submit", "confirm submit"];
+        const cancelPatterns = ["no", "cancel", "continue", "keep going", "don't submit"];
+        
+        function containsAny(patterns) {
+            return patterns.some(pattern => transcript.includes(pattern));
+        }
+        
+        if (containsAny(confirmPatterns)) {
+            log("Submission confirmed");
+            // Call submitExam again, which will proceed with actual submission
+            submitExam();
+            return;
+        } else if (containsAny(cancelPatterns)) {
+            log("Submission cancelled");
+            awaitingSubmitConfirmation = false;
+            speakText("Submission cancelled. Continuing with the exam.");
+            return;
+        } else {
+            speakText("Please say 'yes submit' to confirm submission or 'cancel' to continue the exam.");
+            return;
+        }
+    }
+
+    const option1Patterns = ["option 1", "option one", "first option", "choice 1", "answer 1"];
+    const option2Patterns = ["option 2", "option two", "second option", "choice 2", "answer 2"];
+    const option3Patterns = ["option 3", "option three", "third option", "choice 3", "answer 3"];
+    const option4Patterns = ["option 4", "option four", "fourth option", "choice 4", "answer 4"];
+
+    const nextPatterns = ["next", "next question"];
+    const prevPatterns = ["previous", "previous question", "go back", "prev"];
+    const repeatPatterns = ["repeat", "repeat question", "read question"];
+    const submitPatterns = ["submit", "submit exam", "finish", "finish exam"];
+    const timePatterns = ["time", "time left", "remaining time", "remaining tym"];
+    
+    const sectionTransitionPattern = "move to section";
+    
+    function containsAny(patterns) {
+        return patterns.some(pattern => transcript.includes(pattern));
+    }
+    
+    // Check for section transition command
+    if (transcript.includes(sectionTransitionPattern)) {
+        const parts = transcript.split(sectionTransitionPattern);
+        
+        if (parts.length > 1) {
+            const requestedSection = parts[1].trim();
+            const availableSections = Object.keys(questionsBySubject);
+            const matchedSection = availableSections.find(section => 
+                section.toLowerCase() === requestedSection ||
+                section.toLowerCase().includes(requestedSection)
+            );
+            
+            if (matchedSection) {
+                log(`Switching to ${matchedSection} section by voice command`);
+                setActiveSubject(matchedSection);
+                return;
+            } else {
+                speakText(`Section ${requestedSection} not found. Available sections are: ${availableSections.join(", ")}`);
+                return;
+            }
+        }
+    }
+    
+    // Check for option selection commands
+    if (containsAny(option1Patterns)) {
+        log("Selecting option 1");
+        selectOption("opt1");
+        return;
+    }
+    else if (containsAny(option2Patterns)) {
+        log("Selecting option 2");
+        selectOption("opt2");
+        return;
+    }
+    else if (containsAny(option3Patterns)) {
+        log("Selecting option 3");
+        selectOption("opt3");
+        return;
+    }
+    else if (containsAny(option4Patterns)) {
+        log("Selecting option 4");
+        selectOption("opt4");
+        return;
+    }
+    
+    // Check for navigation commands
+    if (containsAny(nextPatterns)) {
+        log("Going to next question");
+        goToNextQuestion();
+        return;
+    }
+    else if (containsAny(prevPatterns)) {
+        log("Going to previous question");
+        goToPreviousQuestion();
+        return;
+    }
+    else if (containsAny(repeatPatterns)) {
+        log("Repeating question");
+        readInstructions();
+        return;
+    }
+    else if (containsAny(submitPatterns)) {
+        log("Initiating exam submission");
+        submitExam(); // This will trigger the confirmation flow if needed
+        return;
+    }
+    else if (containsAny(timePatterns)) {
+        log("Reporting remaining time");
+        reportRemainingTime();
+        return;
+    }
+
+    // Check for direct section name mentions
+    let sectionFound = false;
+    Object.keys(questionsBySubject).forEach(subject => {
+        if (transcript.includes(subject.toLowerCase())) {
+            log(`Switching to ${subject} section`);
+            setActiveSubject(subject);
+            sectionFound = true;
+            return;
+        }
+    });
+    
+    if (sectionFound) {
+        return;
+    }
+    
+    // If we get here, no command was recognized
+    log("Command not recognized: " + transcript);
+    speakText("Command not recognized. Please try again.");
+}
+
+// Also need to update the click handler for the submit button
+document.addEventListener("DOMContentLoaded", function() {
+    const submitButton = document.getElementById("submit-exam");
+    if (submitButton) {
+        submitButton.addEventListener("click", function(e) {
+            e.preventDefault();
+            submitExam();
+        });
+    }
+});
+//         function submitExam() {
+//     speechSynthesis.cancel();
+//     speakText("Your exam is being submitted. Please wait.");
+
+//     let assessmentId = document.getElementById("assessmentId").value;
+//     let userId = document.getElementById("userId").value;
+
+//     if (!assessmentId || !userId) {
+//         speakText("Error: Assessment ID or User ID is missing. Please restart the exam.");
+//         return;
+//     }
+//     saveCurrentResponses();
+//     let responses = {
+//         assessment_id: assessmentId,
+//         user_id: userId
+//     };
+
+//     let allQuestions = [];
+//     Object.keys(questionsBySubject).forEach(subject => {
+//         allQuestions = allQuestions.concat(questionsBySubject[subject]);
+//     });
+
+//     allQuestions.forEach((question, index) => {
+//         const subject = question.subject;
+//         const subjectQuestionIndex = questionsBySubject[subject].findIndex(q => q.id === question.id);
+//         const userResponse = userResponses[subject] ? userResponses[subject][subjectQuestionIndex] : null;
+
+//         responses[`response${question.id}`] = userResponse;
+//     });
+
+//     fetch("/submit_exam", {
+//         method: "POST",
+//         headers: {
+//             "Content-Type": "application/json"
+//         },
+//         body: JSON.stringify(responses)
+//     })
+//         .then(response => response.json())
+//         .then(result => {
+//             if (result.success) {
+//                 speakText("Exam Completed! Your responses have been submitted successfully.");
+//                 setTimeout(() => {
+//                     window.location.href = "/";
+//                 }, 5000);
+//             } else {
+//                 speakText("Error submitting exam. Please contact the exam administrator.");
+//                 console.error("Error submitting exam:", result.error);
+//             }
+//         })
+//         .catch(error => {
+//             speakText("Error submitting exam. Please contact the exam administrator.");
+//             console.error("Submission error:", error);
+//         });
+// }
 
         function reportRemainingTime() {
             const hours = Math.floor(examDuration / 3600);
@@ -427,27 +650,174 @@ function goToPreviousQuestion() {
 
         let recognitionRunning = false;
 
-        function processSpeechCommand(transcript) {
+//         function processSpeechCommand(transcript) {
+//     transcript = transcript.toLowerCase().trim();
+//     log("Recognized: " + transcript);
+
+//     const option1Patterns = ["option 1", "option one", "first option", "choice 1", "answer 1"];
+//     const option2Patterns = ["option 2", "option two", "second option", "choice 2", "answer 2"];
+//     const option3Patterns = ["option 3", "option three", "third option", "choice 3", "answer 3"];
+//     const option4Patterns = ["option 4", "option four", "fourth option", "choice 4", "answer 4"];
+
+//     const nextPatterns = ["next", "next question"];
+//     const prevPatterns = ["previous", "previous question", "go back", "prev"];
+//     const repeatPatterns = ["repeat", "repeat question", "read question"];
+//     const submitPatterns = ["submit", "submit exam", "finish", "finish exam"];
+//     const timePatterns = ["time", "time left", "remaining time", "remaining tym"];
+    
+//     const sectionTransitionPattern = "move to section";
+//     function containsAny(patterns) {
+//         return patterns.some(pattern => transcript.includes(pattern));
+//     }
+//     if (transcript.includes(sectionTransitionPattern)) {
+//         const parts = transcript.split(sectionTransitionPattern);
+        
+//         if (parts.length > 1) {
+//             const requestedSection = parts[1].trim();
+//             const availableSections = Object.keys(questionsBySubject);
+//             const matchedSection = availableSections.find(section => 
+//                 section.toLowerCase() === requestedSection ||
+//                 section.toLowerCase().includes(requestedSection)
+//             );
+            
+//             if (matchedSection) {
+//                 log(`Switching to ${matchedSection} section by voice command`);
+//                 setActiveSubject(matchedSection);
+//                 return;
+//             } else {
+//                 speakText(`Section ${requestedSection} not found. Available sections are: ${availableSections.join(", ")}`);
+//                 return;
+//             }
+//         }
+//     }
+    
+//     if (containsAny(option1Patterns)) {
+//         log("Selecting option 1");
+//         selectOption("opt1");
+//         return;
+//     }
+//     else if (containsAny(option2Patterns)) {
+//         log("Selecting option 2");
+//         selectOption("opt2");
+//         return;
+//     }
+//     else if (containsAny(option3Patterns)) {
+//         log("Selecting option 3");
+//         selectOption("opt3");
+//         return;
+//     }
+//     else if (containsAny(option4Patterns)) {
+//         log("Selecting option 4");
+//         selectOption("opt4");
+//         return;
+//     }
+//     if (containsAny(nextPatterns)) {
+//         log("Going to next question");
+//         goToNextQuestion();
+//         return;
+//     }
+//     else if (containsAny(prevPatterns)) {
+//         log("Going to previous question");
+//         goToPreviousQuestion();
+//         return;
+//     }
+//     else if (containsAny(repeatPatterns)) {
+//         log("Repeating question");
+//         readInstructions();
+//         return;
+//     }
+//     else if (containsAny(submitPatterns)) {
+//         log("Submitting exam");
+//         submitExam();
+//         return;
+//     }
+//     else if (containsAny(timePatterns)) {
+//         log("Reporting remaining time");
+//         reportRemainingTime();
+//         return;
+//     }
+
+//     Object.keys(questionsBySubject).forEach(subject => {
+//         if (transcript.includes(subject.toLowerCase())) {
+//             log(`Switching to ${subject} section`);
+//             setActiveSubject(subject);
+//             return;
+//         }
+//     });
+// }
+function processSpeechCommand(transcript) {
     transcript = transcript.toLowerCase().trim();
     log("Recognized: " + transcript);
 
+    // Define all valid command patterns
     const option1Patterns = ["option 1", "option one", "first option", "choice 1", "answer 1"];
     const option2Patterns = ["option 2", "option two", "second option", "choice 2", "answer 2"];
     const option3Patterns = ["option 3", "option three", "third option", "choice 3", "answer 3"];
     const option4Patterns = ["option 4", "option four", "fourth option", "choice 4", "answer 4"];
-
+    
     const nextPatterns = ["next", "next question"];
     const prevPatterns = ["previous", "previous question", "go back", "prev"];
     const repeatPatterns = ["repeat", "repeat question", "read question"];
     const submitPatterns = ["submit", "submit exam", "finish", "finish exam"];
     const timePatterns = ["time", "time left", "remaining time", "remaining tym"];
     
-    const sectionTransitionPattern = "move to section";
+    // Helper function to check if transcript contains any pattern
     function containsAny(patterns) {
         return patterns.some(pattern => transcript.includes(pattern));
     }
-    if (transcript.includes(sectionTransitionPattern)) {
-        const parts = transcript.split(sectionTransitionPattern);
+    
+    // Handle option selection commands
+    if (containsAny(option1Patterns)) {
+        log("Selecting option 1");
+        selectOption("opt1");
+        return;
+    }
+    if (containsAny(option2Patterns)) {
+        log("Selecting option 2");
+        selectOption("opt2");
+        return;
+    }
+    if (containsAny(option3Patterns)) {
+        log("Selecting option 3");
+        selectOption("opt3");
+        return;
+    }
+    if (containsAny(option4Patterns)) {
+        log("Selecting option 4");
+        selectOption("opt4");
+        return;
+    }
+    
+    // Handle navigation commands
+    if (containsAny(nextPatterns)) {
+        log("Going to next question");
+        goToNextQuestion();
+        return;
+    }
+    if (containsAny(prevPatterns)) {
+        log("Going to previous question");
+        goToPreviousQuestion();
+        return;
+    }
+    if (containsAny(repeatPatterns)) {
+        log("Repeating question");
+        readInstructions();
+        return;
+    }
+    if (containsAny(submitPatterns)) {
+        log("Submitting exam");
+        submitExam();
+        return;
+    }
+    if (containsAny(timePatterns)) {
+        log("Reporting remaining time");
+        reportRemainingTime();
+        return;
+    }
+    
+    // Check for section transition command
+    if (transcript.includes("move to section")) {
+        const parts = transcript.split("move to section");
         
         if (parts.length > 1) {
             const requestedSection = parts[1].trim();
@@ -467,60 +837,24 @@ function goToPreviousQuestion() {
             }
         }
     }
-    
-    if (containsAny(option1Patterns)) {
-        log("Selecting option 1");
-        selectOption("opt1");
-        return;
-    }
-    else if (containsAny(option2Patterns)) {
-        log("Selecting option 2");
-        selectOption("opt2");
-        return;
-    }
-    else if (containsAny(option3Patterns)) {
-        log("Selecting option 3");
-        selectOption("opt3");
-        return;
-    }
-    else if (containsAny(option4Patterns)) {
-        log("Selecting option 4");
-        selectOption("opt4");
-        return;
-    }
-    if (containsAny(nextPatterns)) {
-        log("Going to next question");
-        goToNextQuestion();
-        return;
-    }
-    else if (containsAny(prevPatterns)) {
-        log("Going to previous question");
-        goToPreviousQuestion();
-        return;
-    }
-    else if (containsAny(repeatPatterns)) {
-        log("Repeating question");
-        readInstructions();
-        return;
-    }
-    else if (containsAny(submitPatterns)) {
-        log("Submitting exam");
-        submitExam();
-        return;
-    }
-    else if (containsAny(timePatterns)) {
-        log("Reporting remaining time");
-        reportRemainingTime();
-        return;
-    }
 
+    // Check for direct section name mentions
+    let sectionFound = false;
     Object.keys(questionsBySubject).forEach(subject => {
         if (transcript.includes(subject.toLowerCase())) {
             log(`Switching to ${subject} section`);
             setActiveSubject(subject);
-            return;
+            sectionFound = true;
         }
     });
+    
+    if (sectionFound) {
+        return;
+    }
+    
+    // If we get here, no command was recognized
+    log("Command not recognized: " + transcript);
+    speakText("Command not recognized. Please try again.");
 }
         recognition.onresult = function (event) {
             const last = event.results.length - 1;

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartAura Examination System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/instructions.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Instructions for SmartAura Examination System.</h2>
+        <h3>General Guidelines.</h3>
+        <ul>
+            <li>Remember the commands and use them for navigation.</li>
+            <li>To select an option, say "Select option 1" or simply "Option 1.</li>
+            <li>To listen to the question again, say "Repeat question" or "Repeat."</li>
+            <li>To move to the next question, say "Next question" or "Next."</li>
+            <li>To return to the previous question, say "Previous question" or "Previous."</li>
+            <li>o switch to a different section, say "Move to Chemistry," "Move to Physics," or "Move to Mathematics."</li>
+            <li>To check the remaining time, say "Time" or "Remaining time."</li>
+            <li>To submit the exam, say "Submit exam."</li>
+            <li>To navigate back to a previous question, say "Previous question."</li>
+        </ul>
+        <h3>Acknowledgment</h3>
+        <p>By proceeding, you agree to follow the rules and guidelines.</p>
+        <div class="button-container">
+            <button id="startButton" class="start-button" onclick="startExam()">If you are ready to begin the test, say "Start Exam"</button>
+        </div>
+    </div>
+
+    <script>
+        // Function to start the exam
+        function startExam() {
+            console.log("Redirecting to exam page...");
+            speakText("Redirecting to the exam page.");
+            setTimeout(() => {
+                window.location.href = "/exam"; // Redirect after speaking
+            }, 2000);
+        }
+    
+        // Function to read the visible text on the page
+        function readPageContent() {
+            let pageText = document.body.innerText.trim(); // Get only visible text
+            speakText(pageText);
+        }
+    
+        // Function to read aloud a given text
+        function speakText(text) {
+            const speech = new SpeechSynthesisUtterance(text);
+            speech.lang = "en-US";
+            speech.rate = 1.0;
+            speech.volume = 1;
+            speech.pitch = 1;
+            speechSynthesis.speak(speech);
+        }
+    
+        // Initialize Speech Recognition
+        let recognition;
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.continuous = true; // Keep listening continuously
+            recognition.interimResults = false; // Get final results only (for accuracy)
+        } else {
+            speakText("Speech recognition is not supported in this browser.");
+        }
+    
+        // Function to start listening
+        function startListening() {
+            if (recognition) {
+                console.log("Listening for commands...");
+                recognition.start();
+            }
+        }
+    
+        // When speech is detected and recognized
+        recognition.onresult = function(event) {
+            let command = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
+            console.log("Recognized command:", command);
+    
+            if (command.includes("start exam")) {
+                startExam();
+            } else {
+                speakText("Unrecognized command:", command);
+            }
+        };
+    
+        // Error handling
+        recognition.onerror = function(event) {
+            console.error("Speech Recognition Error:", event.error);
+            if (event.error === "not-allowed") {
+                speakText("Please allow microphone access and try again.");
+            }
+        };
+    
+        recognition.onend = function() {
+            console.log("Speech recognition stopped. Restarting...");
+            setTimeout(startListening, 500); // Restart listening after a short delay
+        };
+    
+        // Function to speak an alert every 20 seconds
+        function speakReminder() {
+            speakText("Please say 'Start Exam' to begin.");
+            setTimeout(speakReminder, 20000); // Speak alert every 20 seconds
+        }
+    
+        // Automatically start speech recognition and alerts when page loads
+        window.onload = function() {
+            readPageContent(); // Read the displayed text
+            setTimeout(startListening, 3000); // Start listening after 3 seconds
+            setTimeout(speakReminder, 20000); // Start voice alert after 20 seconds
+        };
+        
+    document.addEventListener("DOMContentLoaded", function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const assessmentID = urlParams.get("assessment_id") || sessionStorage.getItem("assessment_id");
+    const userID = urlParams.get("user_id") || sessionStorage.getItem("user_id");
+
+    if (assessmentID && userID) {
+      sessionStorage.setItem("assessment_id", assessmentID);
+      sessionStorage.setItem("user_id", userID);
+      document.getElementById("start-exam-btn").href = `/exam?assessment_id=${assessmentID}&user_id=${userID}`;
+    } else {
+      alert("Session expired. Please restart the process.");
+      window.location.href = "/";
+    }
+  });
+    </script>
+</body>
+</html>    

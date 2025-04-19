@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Triggered Alert</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Voice Triggered Alert Box Example</h1>
+    <p>Say "show alert" to see the alert box!</p>
+
+    <script>
+        // Initialize SpeechRecognition (for modern browsers like Chrome)
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'en-US';  // Set the language to English
+        recognition.continuous = false;  // Stop after one command
+        recognition.interimResults = false;  // Do not show partial results
+
+        // Start listening for speech
+        recognition.start();
+
+        // When speech is detected and recognized
+        recognition.onresult = function(event) {
+            const command = event.results[0][0].transcript.toLowerCase();  // Convert to lowercase
+
+            // Check if the command is "show alert"
+            if (command === "show alert") {
+                alert("You said: Show alert!");  // Display the alert box
+            }
+        };
+
+        // Error handling for recognition issues
+        recognition.onerror = function(event) {
+            console.log("Error occurred in speech recognition: ", event.error);
+        };
+
+        // Restart recognition after each command
+        recognition.onend = function() {
+            recognition.start();
+        };
+    </script>
+
+</body>
+</html>

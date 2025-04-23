@@ -24,6 +24,23 @@ Aura Assist is an AI-powered voice-based examination system designed to assist b
 - Facial verification ensures secure access before the examination starts.
 - Results and analytics can be stored and accessed for further evaluation.
 
+## 🚀 Deployment (Render)
+
+1. Push this project to GitHub.
+2. Go to [https://render.com](https://render.com) and create a free account.
+3. Click "New Web Service" and connect your GitHub repo.
+4. Fill in the deployment settings:
+
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `gunicorn app:app`
+   - **Environment**: Python 3.10 or later
+   - **Root Directory**: `voice_based_examination` (if app.py is inside this folder)
+
+5. Click "Deploy" and you're live 🎉
+
+> Make sure `auraassist.db` and other `.db` files are either included in `.gitignore` or handled securely.
+
+
 ## Contributing
 
 Contributions are welcome! Feel free to fork the repository and submit a pull request.

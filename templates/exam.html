@@ -178,23 +178,33 @@
 let awaitingSubmitConfirmation = false;
 
 // Update the submitExam function to include confirmation
-function submitExam() {
-    // If we're not already awaiting confirmation and there's still time left
-    if (!awaitingSubmitConfirmation && examDuration > 60) { // More than 1 minute left
-        awaitingSubmitConfirmation = true;
-        speechSynthesis.cancel();
-        
-        const minutesLeft = Math.floor(examDuration / 60);
-        speakText(`You still have ${minutesLeft} minutes left. Are you sure you want to submit the exam? Say 'yes submit' to confirm or 'cancel' to continue the exam.`);
-        
-        log("Awaiting submission confirmation...");
-        return;
-    }
-    
-    // If confirmation received or time is almost up (less than 1 minute), proceed with submission
-    awaitingSubmitConfirmation = false;
+// Accept a flag to indicate if submission is due to malpractice
+let examAlreadySubmitted = false;  // ✅ global flag to prevent re-submission
+
+async function submitExam(fromMalpractice = false) {
+    if (examAlreadySubmitted) return; // 🛑 Prevent multiple submissions
+
+    examAlreadySubmitted = true;
     speechSynthesis.cancel();
-    speakText("Your exam is being submitted. Please wait.");
+
+    // ✅ Stop speech recognition if running
+    if (typeof recognition !== "undefined" && recognition) {
+        try { recognition.stop(); } catch (e) {}
+    }
+
+    if (fromMalpractice) {
+        speakText("Due to malpractice, your exam is being submitted.");
+    } else {
+        if (!awaitingSubmitConfirmation && examDuration > 60) {
+            awaitingSubmitConfirmation = true;
+            const minutesLeft = Math.floor(examDuration / 60);
+            speakText(`You still have ${minutesLeft} minutes left. Are you sure you want to submit the exam? Say 'yes submit' to confirm or 'cancel' to continue the exam.`);
+            log("Awaiting submission confirmation...");
+            examAlreadySubmitted = false;  // 🔄 Allow retry
+            return;
+        }
+        speakText("Your exam is being submitted. Please wait.");
+    }
 
     let assessmentId = document.getElementById("assessmentId").value;
     let userId = document.getElementById("userId").value;
@@ -203,8 +213,9 @@ function submitExam() {
         speakText("Error: Assessment ID or User ID is missing. Please restart the exam.");
         return;
     }
-    
+
     saveCurrentResponses();
+
     let responses = {
         assessment_id: assessmentId,
         user_id: userId
@@ -223,6 +234,7 @@ function submitExam() {
         responses[`response${question.id}`] = userResponse;
     });
 
+    // ✅ Actually submit to backend
     fetch("/submit_exam", {
         method: "POST",
         headers: {
@@ -230,23 +242,32 @@ function submitExam() {
         },
         body: JSON.stringify(responses)
     })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            if (!fromMalpractice) {
                 speakText("Exam Completed! Your responses have been submitted successfully.");
-                setTimeout(() => {
-                    window.location.href = "/";
-                }, 5000);
-            } else {
-                speakText("Error submitting exam. Please contact the exam administrator.");
-                console.error("Error submitting exam:", result.error);
             }
-        })
-        .catch(error => {
-            speakText("Error submitting exam. Please contact the exam administrator.");
-            console.error("Submission error:", error);
-        });
+
+            setTimeout(() => {
+                window.location.href = "/";
+            }, 3000); // 🔄 Redirect to home
+        } else {
+            speakText("Error submitting exam. Please contact the administrator.");
+            console.error("Submit error:", result.error);
+            examAlreadySubmitted = false; // Retry allowed
+        }
+    })
+    .catch(error => {
+        speakText("Submission failed. Please check your network or contact support.");
+        console.error("Network error:", error);
+        examAlreadySubmitted = false; // Retry allowed
+    });
 }
+
+
+
+
 
 // Update the processSpeechCommand function to handle confirmation responses
 function processSpeechCommand(transcript) {
@@ -863,20 +884,27 @@ function processSpeechCommand(transcript) {
         };
 
         recognition.onend = function () {
-            if (recognitionRunning) {
-                log("Recognition restarted");
+    if (!examAlreadySubmitted && recognitionRunning) {
+        log("Recognition restarted");
+        setTimeout(() => {
+            try {
+                recognition.start();
+            } catch (e) {
+                log("Error restarting recognition: " + e.message);
                 setTimeout(() => {
-                    try {
-                        recognition.start();
-                    } catch (e) {
-                        log("Error restarting recognition: " + e.message);
-                        setTimeout(() => {
-                            if (recognitionRunning) recognition.start();
-                        }, 10000);
+                    if (!examAlreadySubmitted && recognitionRunning) {
+                        try {
+                            recognition.start();
+                        } catch (err) {
+                            log("Retry failed: " + err.message);
+                        }
                     }
-                }, 250);
+                }, 10000);
             }
-        };
+        }, 250);
+    }
+};
+
 
         recognition.onerror = function (event) {
             log("Recognition error: " + event.error);
@@ -936,99 +964,171 @@ function processSpeechCommand(transcript) {
         });
     </script>
     <script>
-    async function setupCamera() {
-  const video = document.getElementById('video');
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  video.srcObject = stream;
-  await new Promise((resolve) => (video.onloadedmetadata = resolve));
+        let failedVerifications = 0;
+const MAX_VERIFICATION_FAILURES = 3;
+
+
+        async function setupCamera() {
+          const video = document.getElementById('video');
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          video.srcObject = stream;
+          await new Promise((resolve) => (video.onloadedmetadata = resolve));
+        }
+      
+        async function monitor() {
+          const model = await blazeface.load();
+          const video = document.getElementById('video');
+      
+          let multipleFaceDetections = 0;
+          let isCurrentlyWarning = false;
+          let isLookingAwayWarning = false;
+          let consecutiveMultipleFaces = 0;
+          let lastDetectionTime = Date.now();
+      
+          setInterval(async () => {
+            try {
+              const predictions = await model.estimateFaces(video, false);
+      
+              if (!predictions || !Array.isArray(predictions)) {
+                log("Invalid face detection result");
+                return;
+              }
+      
+              const currentTime = Date.now();
+              const timeSinceLastDetection = currentTime - lastDetectionTime;
+              lastDetectionTime = currentTime;
+      
+              if (timeSinceLastDetection > 5000) {
+                consecutiveMultipleFaces = 0;
+              }
+      
+              if (predictions.length > 1) {
+                if (!isCurrentlyWarning) {
+                  speakText("Multiple faces detected. Only one person should be visible.");
+                  isCurrentlyWarning = true;
+                  log("Multiple faces detected: " + predictions.length);
+                }
+      
+                consecutiveMultipleFaces++;
+      
+                log("Consecutive multiple faces: " + consecutiveMultipleFaces);
+      
+                if (consecutiveMultipleFaces == 3) {
+                    log("Multiple face violations threshold reached. Submitting exam...");
+                    speakText("Multiple face violations detected. Submitting exam.");
+                    submitExam(true);  // 🛡️ skip confirmation, auto-submit due to malpractice
+                }
+              } else {
+                isCurrentlyWarning = false;
+      
+                if (consecutiveMultipleFaces > 0) {
+                  consecutiveMultipleFaces--;
+                }
+      
+                if (predictions.length === 1) {
+                  const face = predictions[0];
+                  if (face.landmarks && face.landmarks.length >= 3) {
+                    const leftEye = face.landmarks[0];
+                    const rightEye = face.landmarks[1];
+                    const nose = face.landmarks[2];
+                    const eyeDistance = Math.abs(leftEye[0] - rightEye[0]);
+                    const nosePosition = nose[0] - ((leftEye[0] + rightEye[0]) / 2);
+                  }
+                }
+              }
+            } catch (error) {
+              log("Face detection error: " + error.message);
+            }
+          }, 1000);
+        }
+      
+        // 🔄 Live verification call to backend
+        async function captureSnapshotBase64() {
+    const video = document.getElementById('video');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    return canvas.toDataURL('image/jpeg'); // returns base64 string
 }
 
-async function setupCamera() {
-  const video = document.getElementById('video');
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  video.srcObject = stream;
-  await new Promise((resolve) => (video.onloadedmetadata = resolve));
-}
+let malpracticeSubmitted = false;
+let alertGivenOnceForFails = 0;  // 💬 track how many alerts spoken (max 2)
 
-async function monitor() {
-  const model = await blazeface.load();
-  const video = document.getElementById('video');
-  
-  let multipleFaceDetections = 0;
-  let isCurrentlyWarning = false;
-  let isLookingAwayWarning = false;
-  let consecutiveMultipleFaces = 0;
-  let lastDetectionTime = Date.now();
-  
-  setInterval(async () => {
-    try {
-      const predictions = await model.estimateFaces(video, false);
-      
-      if (!predictions || !Array.isArray(predictions)) {
-        log("Invalid face detection result");
-        return;
-      }
-      
-      const currentTime = Date.now();
-      const timeSinceLastDetection = currentTime - lastDetectionTime;
-      lastDetectionTime = currentTime;
-      
-      if (timeSinceLastDetection > 5000) {
-        consecutiveMultipleFaces = 0;
-      }
-
-      if (predictions.length > 1) {
-        if (!isCurrentlyWarning) {
-          speakText("Multiple faces detected. Only one person should be visible.");
-          isCurrentlyWarning = true;
-          log("Multiple faces detected: " + predictions.length);
-        }
-        
-        consecutiveMultipleFaces++;
-        
-        log("Consecutive multiple faces: " + consecutiveMultipleFaces);
-        
-        if (consecutiveMultipleFaces > 3) {
-          log("Multiple face violations threshold reached. Submitting exam...");
-          speakText("Multiple face violations detected. Submitting exam.");
-          
-          submitExam();
-        }
-      } else {
-        
-        isCurrentlyWarning = false;        
-        
-        if (consecutiveMultipleFaces > 0) {
-          consecutiveMultipleFaces--;
-        }
-        
-        if (predictions.length === 1) {
-          const face = predictions[0];
-          if (face.landmarks && face.landmarks.length >= 3) {
-            const leftEye = face.landmarks[0];
-            const rightEye = face.landmarks[1];
-            const nose = face.landmarks[2];
-            const eyeDistance = Math.abs(leftEye[0] - rightEye[0]);
-            const nosePosition = nose[0] - ((leftEye[0] + rightEye[0]) / 2);
-          }
-        }
-      }
-    } catch (error) {
-      log("Face detection error: " + error.message);
-    }
-  }, 1000);
-}
-async function init() {
+async function verifyLiveFace() {
   try {
-    await setupCamera();
-    log("Camera initialized successfully");
-    monitor();
-    log("Face monitoring started");
+    if (malpracticeSubmitted) return;
+
+    const imageData = await captureSnapshotBase64();
+
+    const response = await fetch("/verify_identity_live", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ image: imageData })
+    });
+
+    const result = await response.json();
+
+    if (!result.success) {
+      failedVerifications++;
+      console.warn(`🔒 Live verification failed (${failedVerifications}/${MAX_VERIFICATION_FAILURES})`);
+
+      if (failedVerifications < MAX_VERIFICATION_FAILURES && alertGivenOnceForFails < 2) {
+        speakText("Face not detected. This will be considered as malpractice. Please stay in the frame and ensure only the authorized candidate is present.");
+        alertGivenOnceForFails++;
+      }
+
+      if (failedVerifications >= MAX_VERIFICATION_FAILURES && !malpracticeSubmitted) {
+        malpracticeSubmitted = true;
+
+        // 🔊 Speak first, then submit after slight delay to ensure voice alert is heard
+        speakText("Due to malpractice, your exam is being submitted.");
+        setTimeout(() => {
+          submitExam(true);  // 🚨 Submit due to repeated failure
+        }, 2500);  // ⏱️ delay to allow alert to play
+      }
+
+    } else {
+      failedVerifications = 0;
+      alertGivenOnceForFails = 0;
+    }
+
   } catch (error) {
-    log("Camera initialization error: " + error.message);
+    console.error("Live verification error:", error);
   }
 }
-init();
-</script>
-</body>
-</html>
+
+
+
+
+
+      
+        // 🔁 Run identity verification every 15 seconds
+        function monitorFaceContinuously() {
+          setInterval(() => {
+            verifyLiveFace();
+          }, 15000); // every 15 seconds
+        }
+      
+        async function init() {
+          try {
+            await setupCamera();
+            log("Camera initialized successfully");
+            monitor();
+            monitorFaceContinuously(); // 🔄 Start live identity verification
+            log("Face monitoring started");
+          } catch (error) {
+            log("Camera initialization error: " + error.message);
+          }
+        }
+      
+        init();
+      </script>      
+      </body>
+      </html>

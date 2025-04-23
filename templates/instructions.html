@@ -80,9 +80,7 @@
     
             if (command.includes("start exam")) {
                 startExam();
-            } else {
-                speakText("Unrecognized command:", command);
-            }
+            } 
         };
     
         // Error handling
@@ -95,13 +93,13 @@
     
         recognition.onend = function() {
             console.log("Speech recognition stopped. Restarting...");
-            setTimeout(startListening, 500); // Restart listening after a short delay
+            setTimeout(startListening,  10); // Restart listening after a short delay
         };
     
         // Function to speak an alert every 20 seconds
         function speakReminder() {
             speakText("Please say 'Start Exam' to begin.");
-            setTimeout(speakReminder, 20000); // Speak alert every 20 seconds
+            setTimeout(speakReminder, 2000000); // Speak alert every 20 seconds
         }
     
         // Automatically start speech recognition and alerts when page loads
